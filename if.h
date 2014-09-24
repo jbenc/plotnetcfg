@@ -12,6 +12,7 @@ struct if_entry {
 	struct if_entry *next;
 	unsigned int if_index;
 	char *if_name;
+	char *driver;
 	struct if_addr_entry *addr;
 };
 

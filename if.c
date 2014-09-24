@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <libnetlink.h>
+#include "ethtool.h"
 #include "utils.h"
 #include "if.h"
 
@@ -62,6 +63,8 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		return;
 	dest->if_index = ifi->ifi_index;
 	dest->if_name = strdup(rta_getattr_str(tb[IFLA_IFNAME]));
+
+	dest->driver = ethtool_driver(dest->if_name);
 }
 
 static char *format_addr(const struct ifaddrmsg *ifa, const void *src)

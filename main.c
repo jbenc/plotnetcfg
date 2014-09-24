@@ -29,6 +29,8 @@ static void dump_ifaces(struct if_entry *list)
 
 	for (ptr = list; ptr; ptr = ptr->next) {
 		printf("  %d: %s\n", ptr->if_index, ptr->if_name);
+		if (ptr->driver)
+			printf("    driver: %s\n", ptr->driver);
 		dump_addresses(ptr->addr);
 	}
 }
