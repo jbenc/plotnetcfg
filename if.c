@@ -63,6 +63,8 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		return;
 	dest->if_index = ifi->ifi_index;
 	dest->if_name = strdup(rta_getattr_str(tb[IFLA_IFNAME]));
+	if (tb[IFLA_MASTER])
+		dest->master_index = *(int *)RTA_DATA(tb[IFLA_MASTER]);
 
 	dest->driver = ethtool_driver(dest->if_name);
 }
@@ -160,10 +162,9 @@ int if_list(struct if_entry **result)
 		return errno ? errno : -1;
 
 	for (l = linfo.head; l; l = l->next) {
-		entry = malloc(sizeof(struct if_entry));
+		entry = calloc(sizeof(struct if_entry), 1);
 		if (!entry)
 			return ENOMEM;
-		entry->next = NULL;
 		fill_if_link(entry, &l->h);
 		if ((err = fill_if_addr(entry, ainfo.head)))
 			return err;
