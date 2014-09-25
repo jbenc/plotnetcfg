@@ -46,7 +46,7 @@ int handler_post(struct netns_entry *root)
 
 	for (ns = root; ns; ns = ns->next) {
 		for (entry = ns->ifaces; entry; entry = entry->next) {
-			handler_loop(err, post, entry, root, ns);
+			handler_loop(err, post, entry, root);
 			if (err)
 				return err;
 		}

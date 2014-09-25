@@ -1,6 +1,7 @@
 #ifndef _NETNS_H
 #define _NETNS_H
-#include "if.h"
+
+struct if_entry;
 
 struct netns_entry {
 	struct netns_entry *next;

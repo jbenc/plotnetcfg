@@ -17,8 +17,7 @@ struct handler {
 	struct handler *next;
 	const char *driver;
 	int (*scan)(struct if_entry *entry);
-	int (*post)(struct if_entry *entry,
-		    struct netns_entry *root, struct netns_entry *ns);
+	int (*post)(struct if_entry *entry, struct netns_entry *root);
 	int (*cleanup)(struct if_entry *entry);
 };
 

@@ -1,6 +1,8 @@
 #ifndef _IF_H
 #define _IF_H
 
+struct netns_entry;
+
 struct if_addr_entry {
 	struct if_addr_entry *next;
 	int family;
@@ -10,6 +12,7 @@ struct if_addr_entry {
 
 struct if_entry {
 	struct if_entry *next;
+	struct netns_entry *ns;
 	unsigned int if_index;
 	char *if_name;
 	char *driver;
@@ -18,7 +21,7 @@ struct if_entry {
 	void *handler_private;
 };
 
-int if_list(struct if_entry **result);
+int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);
 
 #endif

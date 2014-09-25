@@ -55,7 +55,7 @@ int netns_list(struct netns_entry **result)
 		if (entry->name)
 			if ((err = netns_switch(entry)))
 				return err;
-		if ((err = if_list(&entry->ifaces)))
+		if ((err = if_list(&entry->ifaces, entry)))
 			return err;
 	}
 	if ((err = handler_post(*result)))

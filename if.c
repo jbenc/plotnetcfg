@@ -139,7 +139,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 	return 0;
 }
 
-int if_list(struct if_entry **result)
+int if_list(struct if_entry **result, struct netns_entry *ns)
 {
 	struct rtnl_handle rth = { .fd = -1 };
 	struct nlmsg_chain linfo = { NULL, NULL };
@@ -166,6 +166,7 @@ int if_list(struct if_entry **result)
 		entry = calloc(sizeof(struct if_entry), 1);
 		if (!entry)
 			return ENOMEM;
+		entry->ns = ns;
 		fill_if_link(entry, &l->h);
 		if ((err = fill_if_addr(entry, ainfo.head)))
 			return err;
