@@ -86,5 +86,6 @@ static void veth_print(struct if_entry *entry)
 
 	if ((unsigned long)priv > (unsigned long)priv->pair->handler_private)
 		return;
-	printf("%s -> %s [dir=none,style=dotted]\n", ifdot(entry), ifdot(priv->pair));
+	printf("%s -> \n", ifdot(entry));
+	printf("%s [dir=none,style=dotted]\n", ifdot(priv->pair));
 }
