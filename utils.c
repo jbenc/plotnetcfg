@@ -34,3 +34,14 @@ char *ifstr(struct if_entry *entry)
 		snprintf(buf, sizeof(buf), "%s/%s", entry->ns->name, entry->if_name);
 	return buf;
 }
+
+char *ifdot(struct if_entry *entry)
+{
+	static char buf[IFNAMSIZ + NAME_MAX + 4];
+
+	if (!entry->ns->name)
+		/* root ns */
+		return entry->if_name;
+	snprintf(buf, sizeof(buf), "%s___%s", entry->ns->name, entry->if_name);
+	return buf;
+}
