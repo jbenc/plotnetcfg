@@ -8,3 +8,6 @@ if.o: if.c if.h ethtool.h utils.h
 main.o: main.c if.h netns.h utils.h
 netns.o: netns.c netns.h if.h utils.h
 utils.o: utils.c utils.h
+
+clean:
+	rm -f *.o plotnetcfg
