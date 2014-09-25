@@ -5,11 +5,17 @@
 #include "handler.h"
 
 static struct handler *handlers = NULL;
+static struct handler *handlers_tail = NULL;
 
 void handler_register(struct handler *h)
 {
-	h->next = handlers;
-	handlers = h;
+	h->next = NULL;
+	if (!handlers) {
+		handlers = handlers_tail = h;
+		return;
+	}
+	handlers_tail->next = h;
+	handlers_tail = h;
 }
 
 static int driver_match(struct handler *h, struct if_entry *e)
