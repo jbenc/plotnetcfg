@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "handler.h"
+#include "if.h"
 #include "utils.h"
 #include "netns.h"
 
@@ -56,6 +58,8 @@ int netns_list(struct netns_entry **result)
 		if ((err = if_list(&entry->ifaces)))
 			return err;
 	}
+	if ((err = handler_post(*result)))
+		return err;
 	return 0;
 }
 

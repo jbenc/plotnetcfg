@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <libnetlink.h>
 #include "ethtool.h"
+#include "handler.h"
 #include "utils.h"
 #include "if.h"
 
@@ -168,6 +169,8 @@ int if_list(struct if_entry **result)
 		fill_if_link(entry, &l->h);
 		if ((err = fill_if_addr(entry, ainfo.head)))
 			return err;
+		if ((err = handler_scan(entry)))
+			return err;
 		if (!ptr)
 			*result = entry;
 		else
@@ -188,6 +191,7 @@ static void if_addr_destruct(struct if_addr_entry *entry)
 
 static void if_list_destruct(struct if_entry *entry)
 {
+	handler_cleanup(entry);
 	free(entry->if_name);
 	list_free(entry->addr, (destruct_f)if_addr_destruct);
 }

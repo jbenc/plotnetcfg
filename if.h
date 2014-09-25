@@ -15,6 +15,7 @@ struct if_entry {
 	char *driver;
 	unsigned int master_index;
 	struct if_addr_entry *addr;
+	void *handler_private;
 };
 
 int if_list(struct if_entry **result);
