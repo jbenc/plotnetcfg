@@ -37,7 +37,7 @@ static void dump_ifaces(struct if_entry *list)
 	struct if_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
-		printf("  %d: %s\n", ptr->if_index, ptr->if_name);
+		printf("  %d: %s\n", ptr->if_index, ifstr(ptr));
 		if (ptr->master_index)
 			printf("    master: %s\n", ifstr(ptr->master));
 		if (ptr->driver)

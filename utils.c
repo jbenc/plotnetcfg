@@ -29,7 +29,8 @@ char *ifstr(struct if_entry *entry)
 
 	if (!entry->ns->name)
 		/* root ns */
-		return entry->if_name;
-	snprintf(buf, sizeof(buf), "%s/%s", entry->ns->name, entry->if_name);
+		snprintf(buf, sizeof(buf), "/%s", entry->if_name);
+	else
+		snprintf(buf, sizeof(buf), "%s/%s", entry->ns->name, entry->if_name);
 	return buf;
 }
