@@ -1,3 +1,4 @@
+#include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,12 @@ static void dump_ifaces(struct if_entry *list)
 
 	for (ptr = list; ptr; ptr = ptr->next) {
 		printf("  %d: %s\n", ptr->if_index, ifstr(ptr));
+		if (ptr->if_flags & IFF_UP) {
+			printf("    UP");
+			if (!(ptr->if_flags & IFF_RUNNING))
+				printf(",NO-CARRIER");
+			printf("\n");
+		}
 		if (ptr->master_index)
 			printf("    master: %s\n", ifstr(ptr->master));
 		if (ptr->driver)

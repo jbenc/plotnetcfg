@@ -14,6 +14,7 @@ struct if_entry {
 	struct if_entry *next;
 	struct netns_entry *ns;
 	unsigned int if_index;
+	unsigned int if_flags;
 	char *if_name;
 	char *driver;
 	unsigned int master_index;
