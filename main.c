@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "handler.h"
 #include "if.h"
 #include "netns.h"
 #include "utils.h"
 #include "handlers/master.h"
+#include "handlers/veth.h"
 
 static void register_handlers(void)
 {
 	handler_master_register();
+	handler_veth_register();
 }
 
 static void error(char *msg, int err)
@@ -39,6 +42,7 @@ static void dump_ifaces(struct if_entry *list)
 			printf("    master: %s\n", ifstr(ptr->master));
 		if (ptr->driver)
 			printf("    driver: %s\n", ptr->driver);
+		handler_print(ptr);
 		dump_addresses(ptr->addr);
 	}
 }

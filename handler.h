@@ -28,6 +28,9 @@ int handler_post(struct netns_entry *root);
 void handler_cleanup(struct if_entry *entry);
 void handler_print(struct if_entry *entry);
 
+/* For use as a callback. It calls free() on handler_private. */
+void handler_generic_cleanup(struct if_entry *entry);
+
 /* callback returns 0 to ignore the interface, < 0 for error, > 0 for
  * priority.
  * The highest priority match is returned if exactly one highest priority

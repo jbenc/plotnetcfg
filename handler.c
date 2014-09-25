@@ -20,7 +20,7 @@ void handler_register(struct handler *h)
 
 static int driver_match(struct handler *h, struct if_entry *e)
 {
-	return !h->driver || !strcmp(h->driver, e->driver);
+	return !h->driver || (e->driver && !strcmp(h->driver, e->driver));
 }
 
 #define handler_err_loop(err, method, entry, ...)				\
@@ -79,6 +79,11 @@ void handler_cleanup(struct if_entry *entry)
 void handler_print(struct if_entry *entry)
 {
 	handler_loop(print, entry);
+}
+
+void handler_generic_cleanup(struct if_entry *entry)
+{
+	free(entry->handler_private);
 }
 
 int find_interface(struct if_entry **found,
