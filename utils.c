@@ -1,4 +1,9 @@
+#include <limits.h>
+#include <net/if.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include "if.h"
+#include "netns.h"
 #include "utils.h"
 
 struct generic_list {
@@ -16,4 +21,15 @@ void list_free(void *list, destruct_f destruct)
 		free(cur);
 		cur = next;
 	}
+}
+
+char *ifstr(struct if_entry *entry)
+{
+	static char buf[IFNAMSIZ + NAME_MAX + 2];
+
+	if (!entry->ns->name)
+		/* root ns */
+		return entry->if_name;
+	snprintf(buf, sizeof(buf), "%s/%s", entry->ns->name, entry->if_name);
+	return buf;
 }

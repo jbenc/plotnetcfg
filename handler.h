@@ -21,8 +21,21 @@ struct handler {
 	int (*cleanup)(struct if_entry *entry);
 };
 
+void handler_register(struct handler *h);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
 void handler_cleanup(struct if_entry *entry);
+
+/* callback returns 0 to ignore the interface, < 0 for error, > 0 for
+ * priority.
+ * The highest priority match is returned if exactly one highest priority
+ * interface matches. Returns -1 if more highest priority interfaces match.
+ * Returns 0 for success (*found will be NULL for no match) or error
+ * code > 0.
+ */
+int find_interface(struct if_entry **found,
+		   struct netns_entry *root, struct if_entry *self,
+		   int (*callback)(struct if_entry *, void *),
+		   void *arg);
 
 #endif

@@ -4,6 +4,12 @@
 #include "if.h"
 #include "netns.h"
 #include "utils.h"
+#include "handlers/master.h"
+
+static void register_handlers(void)
+{
+	handler_master_register();
+}
 
 static void error(char *msg, int err)
 {
@@ -30,7 +36,7 @@ static void dump_ifaces(struct if_entry *list)
 	for (ptr = list; ptr; ptr = ptr->next) {
 		printf("  %d: %s\n", ptr->if_index, ptr->if_name);
 		if (ptr->master_index)
-			printf("    master: %d\n", ptr->master_index);
+			printf("    master: %s\n", ifstr(ptr->master));
 		if (ptr->driver)
 			printf("    driver: %s\n", ptr->driver);
 		dump_addresses(ptr->addr);
@@ -41,6 +47,8 @@ int main(_unused int argc, _unused char **argv)
 {
 	struct netns_entry *nslist, *nsptr;
 	int err;
+
+	register_handlers();
 
 	if ((err = netns_list(&nslist)))
 		error("get netns list", err);
