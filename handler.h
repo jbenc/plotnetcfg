@@ -18,13 +18,15 @@ struct handler {
 	const char *driver;
 	int (*scan)(struct if_entry *entry);
 	int (*post)(struct if_entry *entry, struct netns_entry *root);
-	int (*cleanup)(struct if_entry *entry);
+	void (*cleanup)(struct if_entry *entry);
+	void (*print)(struct if_entry *entry);
 };
 
 void handler_register(struct handler *h);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
 void handler_cleanup(struct if_entry *entry);
+void handler_print(struct if_entry *entry);
 
 /* callback returns 0 to ignore the interface, < 0 for error, > 0 for
  * priority.

@@ -23,7 +23,7 @@ static int driver_match(struct handler *h, struct if_entry *e)
 	return !h->driver || !strcmp(h->driver, e->driver);
 }
 
-#define handler_loop(err, method, entry, ...)				\
+#define handler_err_loop(err, method, entry, ...)				\
 	{								\
 		struct handler *ptr;					\
 									\
@@ -36,11 +36,22 @@ static int driver_match(struct handler *h, struct if_entry *e)
 		}							\
 	}
 
+#define handler_loop(method, entry, ...)				\
+	{								\
+		struct handler *ptr;					\
+									\
+		for (ptr = handlers; ptr; ptr = ptr->next) {		\
+			if (!ptr->method || !driver_match(ptr, entry))	\
+				continue;				\
+			ptr->method(entry, ##__VA_ARGS__);		\
+		}							\
+	}
+
 int handler_scan(struct if_entry *entry)
 {
 	int err;
 
-	handler_loop(err, scan, entry);
+	handler_err_loop(err, scan, entry);
 	return err;
 }
 
@@ -52,7 +63,7 @@ int handler_post(struct netns_entry *root)
 
 	for (ns = root; ns; ns = ns->next) {
 		for (entry = ns->ifaces; entry; entry = entry->next) {
-			handler_loop(err, post, entry, root);
+			handler_err_loop(err, post, entry, root);
 			if (err)
 				return err;
 		}
@@ -62,9 +73,12 @@ int handler_post(struct netns_entry *root)
 
 void handler_cleanup(struct if_entry *entry)
 {
-	int err;
+	handler_loop(cleanup, entry);
+}
 
-	handler_loop(err, cleanup, entry);
+void handler_print(struct if_entry *entry)
+{
+	handler_loop(print, entry);
 }
 
 int find_interface(struct if_entry **found,
