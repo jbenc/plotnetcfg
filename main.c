@@ -9,12 +9,14 @@
 #include "handlers/master.h"
 #include "handlers/openvswitch.h"
 #include "handlers/veth.h"
+#include "handlers/vlan.h"
 
 static void register_handlers(void)
 {
 	handler_master_register();
 	handler_ovs_register();
 	handler_veth_register();
+	handler_vlan_register();
 }
 
 int main(_unused int argc, _unused char **argv)

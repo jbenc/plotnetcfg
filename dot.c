@@ -43,8 +43,18 @@ static void output_ifaces_pass2(struct if_entry *list)
 
 	for (ptr = list; ptr; ptr = ptr->next) {
 		if (ptr->master) {
-			printf("%s ->", ifdot(ptr));
-			printf("%s\n", ifdot(ptr->master));
+			printf("%s -> ", ifdot(ptr));
+			printf("%s", ifdot(ptr->master));
+			if (ptr->edge_label && !ptr->link)
+				printf(" [label=\"%s\"]", ptr->edge_label);
+			printf("\n");
+		}
+		if (ptr->link) {
+			printf("%s -> ", ifdot(ptr->link));
+			printf("%s", ifdot(ptr));
+			if (ptr->edge_label)
+				printf(" [label=\"%s\"]", ptr->edge_label);
+			printf("\n");
 		}
 		handler_print(ptr);
 	}

@@ -28,24 +28,48 @@ static int match_master(struct if_entry *entry, void *arg)
 	return 1;
 }
 
+static int match_link(struct if_entry *entry, void *arg)
+{
+	struct if_entry *slave = arg;
+
+	if (entry->if_index != slave->link_index)
+		return 0;
+	if (entry->ns == slave->ns)
+		return 2;
+	return 1;
+}
+
+static int err_msg(int err, const char *type, struct if_entry *entry,
+		   struct if_entry *check)
+{
+	if (err > 0)
+		return err;
+	if (err < 0) {
+		fprintf(stderr, "ERROR: cannot find %s for %s reliably.\n",
+			type, ifstr(entry));
+		return EEXIST;
+	}
+	if (!check) {
+		fprintf(stderr, "ERROR: cannot find %s for %s.\n",
+			type, ifstr(entry));
+		return ENOENT;
+	}
+	return 0;
+}
+
 static int process(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
 
-	if (!entry->master_index)
-		return 0;
-	err = find_interface(&entry->master, root, entry, match_master, entry);
-	if (err > 0)
-		return err;
-	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot find master for %s reliably.\n",
-			ifstr(entry));
-		return EEXIST;
+	if (entry->master_index) {
+		err = find_interface(&entry->master, root, entry, match_master, entry);
+		if ((err = err_msg(err, "master", entry, entry->master)))
+			return err;
 	}
-	if (!entry->master) {
-		fprintf(stderr, "ERROR: cannot find master for %s.\n",
-			ifstr(entry));
-		return ENOENT;
+	if (entry->link_index) {
+		err = find_interface(&entry->link, root, entry, match_link, entry);
+		if ((err = err_msg(err, "link", entry, entry->link)))
+			return err;
 	}
 	return 0;
 }

@@ -19,7 +19,10 @@ struct if_entry {
 	char *driver;
 	unsigned int master_index;
 	struct if_entry *master;
+	unsigned int link_index;
+	struct if_entry *link;
 	struct if_addr_entry *addr;
+	char *edge_label;
 	void *handler_private;
 };
 

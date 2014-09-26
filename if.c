@@ -67,8 +67,12 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	dest->if_flags = ifi->ifi_flags;
 	if (tb[IFLA_MASTER])
 		dest->master_index = *(int *)RTA_DATA(tb[IFLA_MASTER]);
+	if (tb[IFLA_LINK])
+		dest->link_index = *(int*)RTA_DATA(tb[IFLA_LINK]);
 
 	dest->driver = ethtool_driver(dest->if_name);
+
+	handler_netlink(dest, tb);
 }
 
 static char *format_addr(const struct ifaddrmsg *ifa, const void *src)
@@ -195,6 +199,7 @@ static void if_list_destruct(struct if_entry *entry)
 {
 	handler_cleanup(entry);
 	free(entry->if_name);
+	free(entry->edge_label);
 	list_free(entry->addr, (destruct_f)if_addr_destruct);
 }
 

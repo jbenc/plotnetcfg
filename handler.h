@@ -1,5 +1,7 @@
 #ifndef _HANDLER_H
 #define _HANDLER_H
+#include <sys/types.h>
+#include <libnetlink.h>
 #include "if.h"
 #include "netns.h"
 
@@ -16,17 +18,19 @@
 struct handler {
 	struct handler *next;
 	const char *driver;
+	int (*netlink)(struct if_entry *entry, struct rtattr **tb);
 	int (*scan)(struct if_entry *entry);
 	int (*post)(struct if_entry *entry, struct netns_entry *root);
-	void (*cleanup)(struct if_entry *entry);
 	void (*print)(struct if_entry *entry);
+	void (*cleanup)(struct if_entry *entry);
 };
 
 void handler_register(struct handler *h);
+int handler_netlink(struct if_entry *entry, struct rtattr **tb);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
-void handler_cleanup(struct if_entry *entry);
 void handler_print(struct if_entry *entry);
+void handler_cleanup(struct if_entry *entry);
 
 /* For use as a callback. It calls free() on handler_private. */
 void handler_generic_cleanup(struct if_entry *entry);
