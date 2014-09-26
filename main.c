@@ -6,11 +6,13 @@
 #include "netns.h"
 #include "utils.h"
 #include "handlers/master.h"
+#include "handlers/openvswitch.h"
 #include "handlers/veth.h"
 
 static void register_handlers(void)
 {
 	handler_master_register();
+	handler_ovs_register();
 	handler_veth_register();
 }
 

@@ -1,2 +1,5 @@
 Contains code from iproute2, originally licensed under GPLv2 or later,
 http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2
+
+Contains Parson library, originally licensed under MIT license,
+http://kgabis.github.com/parson/
