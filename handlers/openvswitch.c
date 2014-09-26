@@ -10,6 +10,7 @@
 #include "../handler.h"
 #include "../if.h"
 #include "../netns.h"
+#include "../utils.h"
 #include "../parson/parson.h"
 #include "openvswitch.h"
 
@@ -378,7 +379,7 @@ static int link_ifaces(struct netns_entry *root)
 	return 0;
 }
 
-int ovs_global_post(struct netns_entry *root)
+static int ovs_global_post(struct netns_entry *root)
 {
 	char *str;
 	int fd, len;
@@ -405,8 +406,31 @@ int ovs_global_post(struct netns_entry *root)
 	return 0;
 }
 
+static void ovs_global_print(_unused struct netns_entry *root)
+{
+	struct ovs_bridge *br;
+	struct ovs_if *iface;
+	char *system;
+
+	for (br = br_list; br; br = br->next) {
+		system = ifstr(br->system->link);
+		for (iface = br->ifaces; iface; iface = iface->next) {
+			if (iface->link)
+				continue;
+			printf("\"//ovs/%s/%s\" [label=\"%s",
+			       br->name, iface->name, iface->name);
+			if (iface->type && *iface->type)
+				printf("\ntype: %s", iface->type);
+			printf("\",style=dotted]\n");
+			printf("\"//ovs/%s/%s\" -> \"%s\"\n",
+			       br->name, iface->name, system);
+		}
+	}
+}
+
 static struct global_handler gh_ovs = {
 	.post = ovs_global_post,
+	.print = ovs_global_print,
 };
 
 void handler_ovs_register(void)

@@ -34,10 +34,12 @@ void handler_generic_cleanup(struct if_entry *entry);
 struct global_handler {
 	struct global_handler *next;
 	int (*post)(struct netns_entry *root);
+	void (*print)(struct netns_entry *root);
 };
 
 void global_handler_register(struct global_handler *h);
 int global_handler_post(struct netns_entry *root);
+void global_handler_print(struct netns_entry *root);
 
 /* callback returns 0 to ignore the interface, < 0 for error, > 0 for
  * priority.

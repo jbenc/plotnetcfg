@@ -16,7 +16,7 @@ utils.o: utils.c utils.h if.h netns.h
 parson/parson.c: parson/parson.h
 
 handlers/master.o: handlers/master.c handlers/master.h handler.h utils.h
-handlers/openvswitch.o: handlers/openvswitch.h parson/parson.h handler.h
+handlers/openvswitch.o: handlers/openvswitch.h parson/parson.h handler.h utils.h
 handlers/veth.o: handlers/veth.c handlers/veth.h handler.h utils.h
 
 clean:

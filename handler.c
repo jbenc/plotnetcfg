@@ -115,6 +115,17 @@ int global_handler_post(struct netns_entry *root)
 	return 0;
 }
 
+void global_handler_print(struct netns_entry *root)
+{
+	struct global_handler *h;
+
+	for (h = ghandlers; h; h = h->next) {
+		if (!h->print)
+			continue;
+		h->print(root);
+	}
+}
+
 int find_interface(struct if_entry **found,
 		   struct netns_entry *root, struct if_entry *self,
 		   int (*callback)(struct if_entry *, void *),

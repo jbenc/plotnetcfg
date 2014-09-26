@@ -65,5 +65,6 @@ void dot_output(struct netns_entry *root)
 	for (ns = root; ns; ns = ns->next) {
 		output_ifaces_pass2(ns->ifaces);
 	}
+	global_handler_print(root);
 	printf("}\n");
 }
