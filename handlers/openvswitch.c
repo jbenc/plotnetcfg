@@ -432,9 +432,29 @@ static void ovs_global_print(_unused struct netns_entry *root)
 	}
 }
 
+static void destruct_if(struct ovs_if *iface)
+{
+	free(iface->name);
+	free(iface->type);
+	free(iface->local_ip);
+	free(iface->remote_ip);
+}
+
+static void destruct_bridge(struct ovs_bridge *br)
+{
+	free(br->name);
+	list_free(br->ifaces, (destruct_f)destruct_if);
+}
+
+static void ovs_global_cleanup(_unused struct netns_entry *root)
+{
+	list_free(br_list, (destruct_f)destruct_bridge);
+}
+
 static struct global_handler gh_ovs = {
 	.post = ovs_global_post,
 	.print = ovs_global_print,
+	.cleanup = ovs_global_cleanup,
 };
 
 void handler_ovs_register(void)

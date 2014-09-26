@@ -89,6 +89,17 @@ void handler_generic_cleanup(struct if_entry *entry)
 	free(entry->handler_private);
 }
 
+#define ghandler_loop(method, root, ...)				\
+	{								\
+		struct global_handler *ptr;				\
+									\
+		for (ptr = ghandlers; ptr; ptr = ptr->next) {		\
+			if (!ptr->method)	\
+				continue;				\
+			ptr->method(root, ##__VA_ARGS__);		\
+		}							\
+	}
+
 void global_handler_register(struct global_handler *h)
 {
 	h->next = NULL;
@@ -117,13 +128,12 @@ int global_handler_post(struct netns_entry *root)
 
 void global_handler_print(struct netns_entry *root)
 {
-	struct global_handler *h;
+	ghandler_loop(print, root);
+}
 
-	for (h = ghandlers; h; h = h->next) {
-		if (!h->print)
-			continue;
-		h->print(root);
-	}
+void global_handler_cleanup(struct netns_entry *root)
+{
+	ghandler_loop(cleanup, root);
 }
 
 int find_interface(struct if_entry **found,

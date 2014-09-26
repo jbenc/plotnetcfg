@@ -9,7 +9,7 @@ dot.o: dot.c dot.h handler.h if.h netns.h utils.h
 ethtool.o: ethtool.c ethtool.h
 handler.o: handler.c handler.h if.h netns.h
 if.o: if.c if.h ethtool.h handler.h utils.h
-main.o: main.c dot.h netns.h utils.h
+main.o: main.c dot.h handler.h netns.h utils.h
 netns.o: netns.c netns.h handler.h if.h utils.h
 utils.o: utils.c utils.h if.h netns.h
 

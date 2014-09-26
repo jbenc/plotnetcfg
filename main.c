@@ -5,6 +5,7 @@
 #include "dot.h"
 #include "netns.h"
 #include "utils.h"
+#include "handler.h"
 #include "handlers/master.h"
 #include "handlers/openvswitch.h"
 #include "handlers/veth.h"
@@ -28,6 +29,7 @@ int main(_unused int argc, _unused char **argv)
 		exit(1);
 	}
 	dot_output(root);
+	global_handler_cleanup(root);
 	netns_list_free(root);
 
 	return 0;
