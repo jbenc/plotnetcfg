@@ -421,6 +421,10 @@ static void ovs_global_print(_unused struct netns_entry *root)
 			       br->name, iface->name, iface->name);
 			if (iface->type && *iface->type)
 				printf("\ntype: %s", iface->type);
+			if (iface->local_ip)
+				printf("\nfrom %s", iface->local_ip);
+			if (iface->remote_ip)
+				printf("\nto %s", iface->remote_ip);
 			printf("\",style=dotted]\n");
 			printf("\"//ovs/%s/%s\" -> \"%s\"\n",
 			       br->name, iface->name, system);
