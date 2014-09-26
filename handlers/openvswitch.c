@@ -18,6 +18,7 @@ static char db[] = "/var/run/openvswitch/db.sock";
 
 struct ovs_if {
 	struct ovs_if *next;
+	struct ovs_bridge *bridge;
 	struct if_entry *link;
 	unsigned int if_index;
 	char *name;
@@ -118,14 +119,17 @@ static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 			iface = parse_iface(jresult, json_array_get_array(jarr, i));
 			if (!iface)
 				return NULL;
+			iface->bridge = br;
 			if (!list)
 				list = iface;
 			else
 				ptr->next = iface;
 			ptr = iface;
 		}
-	} else
+	} else {
 		list = parse_iface(jresult, jarr);
+		list->bridge = br;
+	}
 
 	if (!strcmp(json_object_get_string(jport, "name"), br->name))
 		br->system = list;
@@ -310,15 +314,17 @@ static char *read_all(int fd)
 static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
+	int search_for_system = !iface->bridge->system->link;
 	int weight;
 
 	if (iface->if_index != entry->if_index)
 		return 0;
-	if (entry->master && strcmp(entry->master->if_name, "ovs-system"))
+	if (!search_for_system &&
+	    entry->master && strcmp(entry->master->if_name, "ovs-system"))
 		return 0;
 	weight = 1;
-	if (iface->link) {
-		if (iface->link->ns == entry->ns)
+	if (!search_for_system) {
+		if (iface->bridge->system->link->ns == entry->ns)
 			weight += 2;
 	} else {
 		if (!entry->ns->name)
