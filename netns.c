@@ -58,6 +58,8 @@ int netns_list(struct netns_entry **result)
 		if ((err = if_list(&entry->ifaces, entry)))
 			return err;
 	}
+	if ((err = global_handler_post(*result)))
+		return err;
 	if ((err = handler_post(*result)))
 		return err;
 	return 0;

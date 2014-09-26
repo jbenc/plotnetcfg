@@ -7,6 +7,9 @@
 static struct handler *handlers = NULL;
 static struct handler *handlers_tail = NULL;
 
+static struct global_handler *ghandlers = NULL;
+static struct global_handler *ghandlers_tail = NULL;
+
 void handler_register(struct handler *h)
 {
 	h->next = NULL;
@@ -84,6 +87,32 @@ void handler_print(struct if_entry *entry)
 void handler_generic_cleanup(struct if_entry *entry)
 {
 	free(entry->handler_private);
+}
+
+void global_handler_register(struct global_handler *h)
+{
+	h->next = NULL;
+	if (!ghandlers) {
+		ghandlers = ghandlers_tail = h;
+		return;
+	}
+	ghandlers_tail->next = h;
+	ghandlers_tail = h;
+}
+
+int global_handler_post(struct netns_entry *root)
+{
+	struct global_handler *h;
+	int err;
+
+	for (h = ghandlers; h; h = h->next) {
+		if (!h->post)
+			continue;
+		err = h->post(root);
+		if (err)
+			return err;
+	}
+	return 0;
 }
 
 int find_interface(struct if_entry **found,
