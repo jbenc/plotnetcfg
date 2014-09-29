@@ -1,4 +1,3 @@
-#include <net/if.h>
 #include <stdio.h>
 #include "handler.h"
 #include "if.h"
@@ -37,9 +36,9 @@ static void output_ifaces_pass1(struct if_entry *list)
 		output_label(ptr->label);
 		output_addresses(ptr->addr);
 		printf("\"");
-		if (!(ptr->if_flags & IFF_UP))
+		if (!(ptr->flags & IF_UP))
 			printf(",style=filled,fillcolor=\"grey\"");
-		else if (!(ptr->if_flags & IFF_RUNNING))
+		else if (!(ptr->flags & IF_HAS_LINK))
 			printf(",style=filled,fillcolor=\"pink\"");
 		else
 			printf(",style=filled,fillcolor=\"darkolivegreen1\"");

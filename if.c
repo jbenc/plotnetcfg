@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
+#include <net/if.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -65,7 +66,11 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		return;
 	dest->if_index = ifi->ifi_index;
 	dest->if_name = strdup(rta_getattr_str(tb[IFLA_IFNAME]));
-	dest->if_flags = ifi->ifi_flags;
+	if (ifi->ifi_flags & IFF_UP) {
+		dest->flags |= IF_UP;
+		if (ifi->ifi_flags & IFF_RUNNING)
+			dest->flags |= IF_HAS_LINK;
+	}
 	if (tb[IFLA_MASTER])
 		dest->master_index = *(int *)RTA_DATA(tb[IFLA_MASTER]);
 	if (tb[IFLA_LINK])

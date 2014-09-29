@@ -15,7 +15,7 @@ struct if_entry {
 	struct if_entry *next;
 	struct netns_entry *ns;
 	unsigned int if_index;
-	unsigned int if_flags;
+	unsigned int flags;
 	char *if_name;
 	char *driver;
 	struct label *label;
@@ -29,6 +29,9 @@ struct if_entry {
 	char *edge_label;
 	void *handler_private;
 };
+
+#define IF_UP		1
+#define IF_HAS_LINK	2
 
 int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);
