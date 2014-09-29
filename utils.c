@@ -35,14 +35,20 @@ char *ifstr(struct if_entry *entry)
 	return buf;
 }
 
-char *ifdot(struct if_entry *entry)
+char *ifid(struct if_entry *entry)
 {
-	static char buf[IFNAMSIZ + NAME_MAX + 4];
+	static char buf[IFNAMSIZ + 2 * NAME_MAX + 6 + 1];
+	char *ns;
 
-	if (!entry->ns->name)
+	ns = entry->ns->name;
+	if (!ns)
 		/* root ns */
-		snprintf(buf, sizeof(buf), "\"/%s\"", entry->if_name);
+		ns = "";
+	if (entry->internal_ns)
+		snprintf(buf, sizeof(buf), "\"//%s/%s/%s\"",
+			 entry->internal_ns, ns, entry->if_name);
 	else
-		snprintf(buf, sizeof(buf), "\"%s/%s\"", entry->ns->name, entry->if_name);
+		snprintf(buf, sizeof(buf), "\"%s/%s\"",
+			 ns, entry->if_name);
 	return buf;
 }

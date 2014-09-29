@@ -14,6 +14,7 @@ struct if_addr_entry {
 struct if_entry {
 	struct if_entry *next;
 	struct netns_entry *ns;
+	char *internal_ns;
 	unsigned int if_index;
 	unsigned int flags;
 	char *if_name;

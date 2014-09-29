@@ -204,6 +204,7 @@ static void if_addr_destruct(struct if_addr_entry *entry)
 static void if_list_destruct(struct if_entry *entry)
 {
 	handler_cleanup(entry);
+	free(entry->internal_ns);
 	free(entry->if_name);
 	free(entry->edge_label);
 	label_free(entry->label);

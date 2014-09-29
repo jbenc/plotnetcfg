@@ -30,7 +30,7 @@ static void output_ifaces_pass1(struct if_entry *list)
 	struct if_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
-		printf("%s [label=\"%s", ifdot(ptr), ptr->if_name);
+		printf("%s [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			printf(" (%s)", ptr->driver);
 		output_label(ptr->label);
@@ -52,23 +52,23 @@ static void output_ifaces_pass2(struct if_entry *list)
 
 	for (ptr = list; ptr; ptr = ptr->next) {
 		if (ptr->master) {
-			printf("%s -> ", ifdot(ptr));
-			printf("%s", ifdot(ptr->master));
+			printf("%s -> ", ifid(ptr));
+			printf("%s", ifid(ptr->master));
 			if (ptr->edge_label && !ptr->link)
 				printf(" [label=\"%s\"]", ptr->edge_label);
 			printf("\n");
 		}
 		if (ptr->link) {
-			printf("%s -> ", ifdot(ptr->link));
-			printf("%s", ifdot(ptr));
+			printf("%s -> ", ifid(ptr->link));
+			printf("%s", ifid(ptr));
 			if (ptr->edge_label)
 				printf(" [label=\"%s\"]", ptr->edge_label);
 			printf("\n");
 		}
 		if (ptr->peer &&
 		    (unsigned long)ptr > (unsigned long)ptr->peer) {
-			printf("%s -> ", ifdot(ptr));
-			printf("%s [dir=none,style=dotted]\n", ifdot(ptr->peer));
+			printf("%s -> ", ifid(ptr));
+			printf("%s [dir=none,style=dotted]\n", ifid(ptr->peer));
 		}
 		handler_print(ptr);
 	}
