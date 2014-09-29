@@ -12,5 +12,6 @@ struct netns_entry {
 int netns_list(struct netns_entry **result);
 void netns_list_free(struct netns_entry *list);
 int netns_switch(struct netns_entry *dest);
+int netns_switch_root(void);
 
 #endif

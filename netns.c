@@ -65,19 +65,30 @@ int netns_list(struct netns_entry **result)
 	return 0;
 }
 
-int netns_switch(struct netns_entry *dest)
+static int do_netns_switch(const char *path)
 {
-	char net_path[PATH_MAX];
 	int netns;
 
-	snprintf(net_path, sizeof(net_path), "%s/%s", NETNS_RUN_DIR, dest->name);
-	netns = open(net_path, O_RDONLY);
+	netns = open(path, O_RDONLY);
 	if (netns < 0)
 		return errno;
 	if (setns(netns, CLONE_NEWNET) < 0)
 		return errno;
 	close(netns);
 	return 0;
+}
+
+int netns_switch(struct netns_entry *dest)
+{
+	char net_path[PATH_MAX];
+
+	snprintf(net_path, sizeof(net_path), "%s/%s", NETNS_RUN_DIR, dest->name);
+	return do_netns_switch(net_path);
+}
+
+int netns_switch_root(void)
+{
+	return do_netns_switch("/proc/1/ns/net");
 }
 
 static void netns_list_destruct(struct netns_entry *entry)
