@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -25,6 +26,10 @@ struct ovs_if {
 	unsigned int if_index;
 	char *name;
 	char *type;
+	/* vlan tags: */
+	unsigned int tag;
+	unsigned int trunks_count;
+	unsigned int *trunks;
 	/* for vxlan: */
 	char *local_ip;
 	char *remote_ip;
@@ -100,6 +105,29 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 	return iface;
 }
 
+static int parse_vlan_info(struct ovs_if *iface, JSON_Object *jport)
+{
+	JSON_Value *jval;
+	JSON_Array *jarr;
+	unsigned int i, cnt;
+
+	jval = json_object_get_value(jport, "tag");
+	if (!is_empty(jval))
+		iface->tag = json_number(jval);
+	jarr = json_object_get_array(jport, "trunks");
+	jarr = json_array_get_array(jarr, 1);
+	cnt = json_array_get_count(jarr);
+	if (cnt > 0) {
+		iface->trunks = malloc(sizeof(*iface->trunks) * cnt);
+		if (!iface->trunks)
+			return ENOMEM;
+		iface->trunks_count = cnt;
+		for (i = 0; i < cnt; i++)
+			iface->trunks[i] = json_array_get_number(jarr, i);
+	}
+	return 0;
+}
+
 static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 				 struct ovs_bridge *br)
 {
@@ -122,6 +150,8 @@ static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 			if (!iface)
 				return NULL;
 			iface->bridge = br;
+			if (parse_vlan_info(iface, jport))
+				return NULL;
 			if (!list)
 				list = iface;
 			else
@@ -130,7 +160,11 @@ static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 		}
 	} else {
 		list = parse_iface(jresult, jarr);
+		if (!list)
+			return NULL;
 		list->bridge = br;
+		if (parse_vlan_info(list, jport))
+			return NULL;
 	}
 
 	if (!strcmp(json_object_get_string(jport, "name"), br->name))
@@ -388,6 +422,21 @@ static void label_iface(struct ovs_if *iface)
 		label_add(&iface->link->label, "from %s", iface->local_ip);
 	if (iface->remote_ip)
 		label_add(&iface->link->label, "to %s", iface->remote_ip);
+
+	if (iface->tag)
+		 asprintf(&iface->link->edge_label, "tag %u", iface->tag);
+	else if (iface->trunks_count) {
+		char *buf, *ptr;
+		unsigned int i;
+
+		buf = malloc(16 * iface->trunks_count + 7 + 1);
+		if (!buf)
+			return;
+		ptr = buf + sprintf(buf, "trunks %u", iface->trunks[0]);
+		for (i = 1; i < iface->trunks_count; i++)
+			ptr += sprintf(ptr, ", %u", iface->trunks[i]);
+		iface->link->edge_label = buf;
+	}
 }
 
 static int link_ifaces(struct netns_entry *root)
@@ -454,6 +503,7 @@ static void destruct_if(struct ovs_if *iface)
 {
 	free(iface->name);
 	free(iface->type);
+	free(iface->trunks);
 	free(iface->local_ip);
 	free(iface->remote_ip);
 }
