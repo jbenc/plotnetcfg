@@ -215,3 +215,17 @@ void if_list_free(struct if_entry *list)
 {
 	list_free(list, (destruct_f)if_list_destruct);
 }
+
+void if_append(struct if_entry **list, struct if_entry *item)
+{
+	struct if_entry *ptr = *list;
+
+	item->next = NULL;
+	if (!ptr) {
+		*list = item;
+		return;
+	}
+	while (ptr->next)
+		ptr = ptr->next;
+	ptr->next = item;
+}

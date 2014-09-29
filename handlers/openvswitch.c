@@ -6,9 +6,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <linux/un.h>
+#include <net/if.h>
 #include <unistd.h>
 #include "../handler.h"
 #include "../if.h"
+#include "../label.h"
 #include "../netns.h"
 #include "../utils.h"
 #include "../parson/parson.h"
@@ -357,6 +359,37 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root)
 	return 0;
 }
 
+static int create_iface(struct ovs_if *iface, struct netns_entry *root)
+{
+	struct if_entry *entry;
+	char buf[IFNAMSIZ + 4 + 1];
+
+	entry = calloc(sizeof(*entry), 1);
+	if (!entry)
+		return ENOMEM;
+	entry->ns = root;
+	snprintf(buf, sizeof(buf), "ovs:%s", iface->bridge->name);
+	entry->internal_ns = strdup(buf);
+	entry->if_name = strdup(iface->name);
+	if (!entry->internal_ns || !entry->if_name)
+		return ENOMEM;
+	entry->flags |= IF_INTERNAL;
+
+	if_append(&root->ifaces, entry);
+	iface->link = entry;
+	return 0;
+}
+
+static void label_iface(struct ovs_if *iface)
+{
+	if (iface->type && *iface->type)
+		label_add(&iface->link->label, "type: %s", iface->type);
+	if (iface->local_ip)
+		label_add(&iface->link->label, "from %s", iface->local_ip);
+	if (iface->remote_ip)
+		label_add(&iface->link->label, "to %s", iface->remote_ip);
+}
+
 static int link_ifaces(struct netns_entry *root)
 {
 	struct ovs_bridge *br;
@@ -374,12 +407,17 @@ static int link_ifaces(struct netns_entry *root)
 		for (iface = br->ifaces; iface; iface = iface->next) {
 			if (iface == br->system)
 				continue;
-			if ((err = link_iface(iface, root)))
+			if (iface->if_index)
+				err = link_iface(iface, root);
+			else
+				err = create_iface(iface, root);
+			if (err)
 				return err;
 			if (iface->link) {
 				/* reconnect to the ovs master */
 				iface->link->master = br->system->link;
 			}
+			label_iface(iface);
 		}
 	}
 	return 0;
@@ -412,32 +450,6 @@ static int ovs_global_post(struct netns_entry *root)
 	return 0;
 }
 
-static void ovs_global_print(_unused struct netns_entry *root)
-{
-	struct ovs_bridge *br;
-	struct ovs_if *iface;
-	char *system;
-
-	for (br = br_list; br; br = br->next) {
-		system = ifstr(br->system->link);
-		for (iface = br->ifaces; iface; iface = iface->next) {
-			if (iface->link)
-				continue;
-			printf("\"//ovs/%s/%s\" [label=\"%s",
-			       br->name, iface->name, iface->name);
-			if (iface->type && *iface->type)
-				printf("\ntype: %s", iface->type);
-			if (iface->local_ip)
-				printf("\nfrom %s", iface->local_ip);
-			if (iface->remote_ip)
-				printf("\nto %s", iface->remote_ip);
-			printf("\",style=dotted]\n");
-			printf("\"//ovs/%s/%s\" -> \"%s\"\n",
-			       br->name, iface->name, system);
-		}
-	}
-}
-
 static void destruct_if(struct ovs_if *iface)
 {
 	free(iface->name);
@@ -459,7 +471,6 @@ static void ovs_global_cleanup(_unused struct netns_entry *root)
 
 static struct global_handler gh_ovs = {
 	.post = ovs_global_post,
-	.print = ovs_global_print,
 	.cleanup = ovs_global_cleanup,
 };
 
