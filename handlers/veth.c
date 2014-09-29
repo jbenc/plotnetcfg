@@ -8,19 +8,11 @@
 
 static int veth_scan(struct if_entry *entry);
 static int veth_post(struct if_entry *entry, struct netns_entry *root);
-static void veth_print(struct if_entry *entry);
 
 static struct handler h_veth = {
 	.driver = "veth",
 	.scan = veth_scan,
 	.post = veth_post,
-	.print = veth_print,
-	.cleanup = handler_generic_cleanup,
-};
-
-struct veth_private {
-	unsigned int peer_index;
-	struct if_entry *peer;
 };
 
 void handler_veth_register(void)
@@ -30,27 +22,18 @@ void handler_veth_register(void)
 
 static int veth_scan(struct if_entry *entry)
 {
-	struct veth_private *priv;
-
-	priv = calloc(sizeof(*priv), 1);
-	if (!priv)
-		return ENOMEM;
-	entry->handler_private = priv;
-
-	priv->peer_index = ethtool_veth_peer(entry->if_name);
+	entry->peer_index = ethtool_veth_peer(entry->if_name);
 	return 0;
 }
 
 static int match_peer(struct if_entry *entry, void *arg)
 {
 	struct if_entry *link = arg;
-	struct veth_private *link_priv = link->handler_private;
-	struct veth_private *entry_priv = entry->handler_private;
 
-	if (entry->if_index != link_priv->peer_index ||
-	    entry_priv->peer_index != link->if_index)
+	if (entry->if_index != link->peer_index ||
+	    entry->peer_index != link->if_index)
 		return 0;
-	if (entry_priv->peer && entry_priv->peer != link)
+	if (entry->peer && entry->peer != link)
 		return 0;
 	if (entry->ns == link->ns)
 		return 2;
@@ -59,12 +42,11 @@ static int match_peer(struct if_entry *entry, void *arg)
 
 static int veth_post(struct if_entry *entry, struct netns_entry *root)
 {
-	struct veth_private *priv = entry->handler_private;
 	int err;
 
-	if (!priv->peer_index)
+	if (!entry->peer_index)
 		return ENOENT;
-	err = find_interface(&priv->peer, root, entry, match_peer, entry);
+	err = find_interface(&entry->peer, root, entry, match_peer, entry);
 	if (err > 0)
 		return err;
 	if (err < 0) {
@@ -72,20 +54,10 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 			ifstr(entry));
 		return EEXIST;
 	}
-	if (!priv->peer) {
+	if (!entry->peer) {
 		fprintf(stderr, "ERROR: cannot find the veth peer for %s.\n",
 			ifstr(entry));
 		return ENOENT;
 	}
 	return 0;
-}
-
-static void veth_print(struct if_entry *entry)
-{
-	struct veth_private *priv = entry->handler_private;
-
-	if ((unsigned long)priv > (unsigned long)priv->peer->handler_private)
-		return;
-	printf("%s -> \n", ifdot(entry));
-	printf("%s [dir=none,style=dotted]\n", ifdot(priv->peer));
 }

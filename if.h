@@ -21,6 +21,8 @@ struct if_entry {
 	struct if_entry *master;
 	unsigned int link_index;
 	struct if_entry *link;
+	unsigned int peer_index;
+	struct if_entry *peer;
 	struct if_addr_entry *addr;
 	char *edge_label;
 	void *handler_private;

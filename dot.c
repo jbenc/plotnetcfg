@@ -56,6 +56,11 @@ static void output_ifaces_pass2(struct if_entry *list)
 				printf(" [label=\"%s\"]", ptr->edge_label);
 			printf("\n");
 		}
+		if (ptr->peer &&
+		    (unsigned long)ptr > (unsigned long)ptr->peer) {
+			printf("%s -> ", ifdot(ptr));
+			printf("%s [dir=none,style=dotted]\n", ifdot(ptr->peer));
+		}
 		handler_print(ptr);
 	}
 }
