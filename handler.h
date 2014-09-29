@@ -21,7 +21,6 @@ struct handler {
 	int (*netlink)(struct if_entry *entry, struct rtattr **tb);
 	int (*scan)(struct if_entry *entry);
 	int (*post)(struct if_entry *entry, struct netns_entry *root);
-	void (*print)(struct if_entry *entry);
 	void (*cleanup)(struct if_entry *entry);
 };
 
@@ -29,7 +28,6 @@ void handler_register(struct handler *h);
 int handler_netlink(struct if_entry *entry, struct rtattr **tb);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
-void handler_print(struct if_entry *entry);
 void handler_cleanup(struct if_entry *entry);
 
 /* For use as a callback. It calls free() on handler_private. */
@@ -38,13 +36,11 @@ void handler_generic_cleanup(struct if_entry *entry);
 struct global_handler {
 	struct global_handler *next;
 	int (*post)(struct netns_entry *root);
-	void (*print)(struct netns_entry *root);
 	void (*cleanup)(struct netns_entry *root);
 };
 
 void global_handler_register(struct global_handler *h);
 int global_handler_post(struct netns_entry *root);
-void global_handler_print(struct netns_entry *root);
 void global_handler_cleanup(struct netns_entry *root);
 
 /* callback returns 0 to ignore the interface, < 0 for error, > 0 for

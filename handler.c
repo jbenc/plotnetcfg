@@ -87,11 +87,6 @@ void handler_cleanup(struct if_entry *entry)
 	handler_loop(cleanup, entry);
 }
 
-void handler_print(struct if_entry *entry)
-{
-	handler_loop(print, entry);
-}
-
 void handler_generic_cleanup(struct if_entry *entry)
 {
 	free(entry->handler_private);
@@ -132,11 +127,6 @@ int global_handler_post(struct netns_entry *root)
 			return err;
 	}
 	return 0;
-}
-
-void global_handler_print(struct netns_entry *root)
-{
-	ghandler_loop(print, root);
 }
 
 void global_handler_cleanup(struct netns_entry *root)

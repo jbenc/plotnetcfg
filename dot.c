@@ -72,7 +72,6 @@ static void output_ifaces_pass2(struct if_entry *list)
 			printf("%s -> ", ifid(ptr));
 			printf("%s [dir=none,style=dotted]\n", ifid(ptr->peer));
 		}
-		handler_print(ptr);
 	}
 }
 
@@ -91,6 +90,5 @@ void dot_output(struct netns_entry *root)
 	for (ns = root; ns; ns = ns->next) {
 		output_ifaces_pass2(ns->ifaces);
 	}
-	global_handler_print(root);
 	printf("}\n");
 }
