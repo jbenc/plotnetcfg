@@ -6,6 +6,7 @@
 #include <libnetlink.h>
 #include "ethtool.h"
 #include "handler.h"
+#include "label.h"
 #include "utils.h"
 #include "if.h"
 
@@ -200,6 +201,7 @@ static void if_list_destruct(struct if_entry *entry)
 	handler_cleanup(entry);
 	free(entry->if_name);
 	free(entry->edge_label);
+	label_free(entry->label);
 	list_free(entry->addr, (destruct_f)if_addr_destruct);
 }
 

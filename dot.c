@@ -2,9 +2,18 @@
 #include <stdio.h>
 #include "handler.h"
 #include "if.h"
+#include "label.h"
 #include "netns.h"
 #include "utils.h"
 #include "dot.h"
+
+static void output_label(struct label *list)
+{
+	struct label *ptr;
+
+	for (ptr = list; ptr; ptr = ptr->next)
+		printf("\\n%s", ptr->text);
+}
 
 static void output_addresses(struct if_addr_entry *list)
 {
@@ -25,6 +34,7 @@ static void output_ifaces_pass1(struct if_entry *list)
 		printf("%s [label=\"%s", ifdot(ptr), ptr->if_name);
 		if (ptr->driver)
 			printf(" (%s)", ptr->driver);
+		output_label(ptr->label);
 		output_addresses(ptr->addr);
 		printf("\"");
 		if (!(ptr->if_flags & IFF_UP))

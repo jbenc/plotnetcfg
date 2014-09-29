@@ -2,6 +2,7 @@
 #define _IF_H
 
 struct netns_entry;
+struct label;
 
 struct if_addr_entry {
 	struct if_addr_entry *next;
@@ -17,6 +18,7 @@ struct if_entry {
 	unsigned int if_flags;
 	char *if_name;
 	char *driver;
+	struct label *label;
 	unsigned int master_index;
 	struct if_entry *master;
 	unsigned int link_index;

@@ -1,14 +1,15 @@
 CFLAGS=-W -Wall
 
-plotnetcfg: dot.o ethtool.o handler.o if.o main.o netns.o utils.o \
+plotnetcfg: dot.o ethtool.o handler.o if.o label.o main.o netns.o utils.o \
 	    parson/parson.o \
 	    handlers/master.o handlers/openvswitch.o handlers/veth.o handlers/vlan.o
 	gcc -o $@ $+ /usr/lib64/libnetlink.a
 
-dot.o: dot.c dot.h handler.h if.h netns.h utils.h
+dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h
 ethtool.o: ethtool.c ethtool.h
 handler.o: handler.c handler.h if.h netns.h
-if.o: if.c if.h ethtool.h handler.h utils.h
+if.o: if.c if.h ethtool.h handler.h label.h utils.h
+label.o: label.h label.c utils.h
 main.o: main.c dot.h handler.h netns.h utils.h
 netns.o: netns.c netns.h handler.h if.h utils.h
 utils.o: utils.c utils.h if.h netns.h
