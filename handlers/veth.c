@@ -31,7 +31,8 @@ static int match_peer(struct if_entry *entry, void *arg)
 	struct if_entry *link = arg;
 
 	if (entry->if_index != link->peer_index ||
-	    entry->peer_index != link->if_index)
+	    entry->peer_index != link->if_index ||
+	    strcmp(entry->driver, "veth"))
 		return 0;
 	if (entry->peer && entry->peer != link)
 		return 0;
