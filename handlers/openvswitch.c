@@ -13,6 +13,7 @@
 #include "../if.h"
 #include "../label.h"
 #include "../netns.h"
+#include "../tunnel.h"
 #include "../utils.h"
 #include "../parson/parson.h"
 #include "openvswitch.h"
@@ -377,7 +378,7 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root)
 
 	if (!iface->if_index || iface->link)
 		return 0;
-	err = find_interface(&iface->link, root, NULL, link_iface_search, iface);
+	err = find_interface(&iface->link, root, 1, NULL, link_iface_search, iface);
 	if (err > 0)
 		return err;
 	if (err < 0) {
@@ -439,6 +440,13 @@ static void label_iface(struct ovs_if *iface)
 	}
 }
 
+static void link_vxlan(struct ovs_if *iface)
+{
+	if (!iface->local_ip || !*iface->local_ip)
+		return;
+	iface->link->peer = tunnel_find_iface(iface->link->ns, iface->local_ip);
+}
+
 static int link_ifaces(struct netns_entry *root)
 {
 	struct ovs_bridge *br;
@@ -467,6 +475,8 @@ static int link_ifaces(struct netns_entry *root)
 				iface->link->master = br->system->link;
 			}
 			label_iface(iface);
+			if (!strcmp(iface->type, "vxlan"))
+				link_vxlan(iface);
 		}
 	}
 	return 0;

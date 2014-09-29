@@ -135,7 +135,8 @@ void global_handler_cleanup(struct netns_entry *root)
 }
 
 int find_interface(struct if_entry **found,
-		   struct netns_entry *root, struct if_entry *self,
+		   struct netns_entry *root, int all_ns,
+		   struct if_entry *self,
 		   int (*callback)(struct if_entry *, void *),
 		   void *arg)
 {
@@ -157,6 +158,8 @@ int find_interface(struct if_entry **found,
 			} else if (res == prio)
 				count++;
 		}
+		if (!all_ns)
+			break;
 	}
 	if (!prio) {
 		*found = NULL;

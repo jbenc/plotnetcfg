@@ -62,12 +62,12 @@ static int process(struct if_entry *entry, struct netns_entry *root)
 	int err;
 
 	if (entry->master_index) {
-		err = find_interface(&entry->master, root, entry, match_master, entry);
+		err = find_interface(&entry->master, root, 1, entry, match_master, entry);
 		if ((err = err_msg(err, "master", entry, entry->master)))
 			return err;
 	}
 	if (entry->link_index) {
-		err = find_interface(&entry->link, root, entry, match_link, entry);
+		err = find_interface(&entry->link, root, 1, entry, match_link, entry);
 		if ((err = err_msg(err, "link", entry, entry->link)))
 			return err;
 	}

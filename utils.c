@@ -1,7 +1,9 @@
+#include <arpa/inet.h>
 #include <limits.h>
 #include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "if.h"
 #include "netns.h"
 #include "utils.h"
@@ -51,4 +53,17 @@ char *ifid(struct if_entry *entry)
 		snprintf(buf, sizeof(buf), "\"%s/%s\"",
 			 ns, entry->if_name);
 	return buf;
+}
+
+int raw_addr(void *dst, const char *src)
+{
+	int af;
+
+	if (strchr(src, ':'))
+		af = AF_INET6;
+	else
+		af = AF_INET;
+	if (inet_pton(af, src, dst) <= 0)
+		return -1;
+	return af;
 }

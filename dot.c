@@ -68,7 +68,8 @@ static void output_ifaces_pass2(struct if_entry *list)
 			printf("\n");
 		}
 		if (ptr->peer &&
-		    (unsigned long)ptr > (unsigned long)ptr->peer) {
+		    (((unsigned long)ptr > (unsigned long)ptr->peer) ||
+		     !ptr->peer->peer)) {
 			printf("%s -> ", ifid(ptr));
 			printf("%s [dir=none,style=dotted]\n", ifid(ptr->peer));
 		}

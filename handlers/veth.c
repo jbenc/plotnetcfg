@@ -47,7 +47,7 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 
 	if (!entry->peer_index)
 		return ENOENT;
-	err = find_interface(&entry->peer, root, entry, match_peer, entry);
+	err = find_interface(&entry->peer, root, 1, entry, match_peer, entry);
 	if (err > 0)
 		return err;
 	if (err < 0) {
