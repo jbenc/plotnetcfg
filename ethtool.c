@@ -41,7 +41,7 @@ char *ethtool_driver(const char *ifname)
 	return strdup(info.driver);
 }
 
-unsigned int ethtool_veth_pair(const char *ifname)
+unsigned int ethtool_veth_peer(const char *ifname)
 {
 	struct ethtool_drvinfo info;
 	struct ethtool_gstrings *strs;

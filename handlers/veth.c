@@ -19,8 +19,8 @@ static struct handler h_veth = {
 };
 
 struct veth_private {
-	unsigned int pair_index;
-	struct if_entry *pair;
+	unsigned int peer_index;
+	struct if_entry *peer;
 };
 
 void handler_veth_register(void)
@@ -37,20 +37,20 @@ static int veth_scan(struct if_entry *entry)
 		return ENOMEM;
 	entry->handler_private = priv;
 
-	priv->pair_index = ethtool_veth_pair(entry->if_name);
+	priv->peer_index = ethtool_veth_peer(entry->if_name);
 	return 0;
 }
 
-static int match_pair(struct if_entry *entry, void *arg)
+static int match_peer(struct if_entry *entry, void *arg)
 {
 	struct if_entry *link = arg;
 	struct veth_private *link_priv = link->handler_private;
 	struct veth_private *entry_priv = entry->handler_private;
 
-	if (entry->if_index != link_priv->pair_index ||
-	    entry_priv->pair_index != link->if_index)
+	if (entry->if_index != link_priv->peer_index ||
+	    entry_priv->peer_index != link->if_index)
 		return 0;
-	if (entry_priv->pair && entry_priv->pair != link)
+	if (entry_priv->peer && entry_priv->peer != link)
 		return 0;
 	if (entry->ns == link->ns)
 		return 2;
@@ -62,18 +62,18 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 	struct veth_private *priv = entry->handler_private;
 	int err;
 
-	if (!priv->pair_index)
+	if (!priv->peer_index)
 		return ENOENT;
-	err = find_interface(&priv->pair, root, entry, match_pair, entry);
+	err = find_interface(&priv->peer, root, entry, match_peer, entry);
 	if (err > 0)
 		return err;
 	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot find the other side for veth interface %s reliably.\n",
+		fprintf(stderr, "ERROR: cannot find the veth peer for %s reliably.\n",
 			ifstr(entry));
 		return EEXIST;
 	}
-	if (!priv->pair) {
-		fprintf(stderr, "ERROR: cannot find the other side for veth interface %s.\n",
+	if (!priv->peer) {
+		fprintf(stderr, "ERROR: cannot find the veth peer for %s.\n",
 			ifstr(entry));
 		return ENOENT;
 	}
@@ -84,8 +84,8 @@ static void veth_print(struct if_entry *entry)
 {
 	struct veth_private *priv = entry->handler_private;
 
-	if ((unsigned long)priv > (unsigned long)priv->pair->handler_private)
+	if ((unsigned long)priv > (unsigned long)priv->peer->handler_private)
 		return;
 	printf("%s -> \n", ifdot(entry));
-	printf("%s [dir=none,style=dotted]\n", ifdot(priv->pair));
+	printf("%s [dir=none,style=dotted]\n", ifdot(priv->peer));
 }
