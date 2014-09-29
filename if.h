@@ -4,11 +4,17 @@
 struct netns_entry;
 struct label;
 
+struct addr {
+	int family;
+	int prefixlen;
+	char *formatted;
+	void *raw;
+};
+
 struct if_addr_entry {
 	struct if_addr_entry *next;
-	int family;
-	char *addr;
-	char *peer;
+	struct addr addr;
+	struct addr peer;
 };
 
 struct if_entry {

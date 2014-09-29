@@ -19,9 +19,9 @@ static void output_addresses(struct if_addr_entry *list)
 	struct if_addr_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
-		printf("\\n%s", ptr->addr);
-		if (ptr->peer)
-			printf(" peer %s", ptr->peer);
+		printf("\\n%s", ptr->addr.formatted);
+		if (ptr->peer.formatted)
+			printf(" peer %s", ptr->peer.formatted);
 	}
 }
 

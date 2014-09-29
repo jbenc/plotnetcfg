@@ -81,18 +81,28 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	handler_netlink(dest, tb);
 }
 
-static char *format_addr(const struct ifaddrmsg *ifa, const void *src)
+static int store_addr(struct addr *dest, const struct ifaddrmsg *ifa,
+		      const struct rtattr *rta)
 {
 	char buf[64];
-	int len;
+	unsigned int len = RTA_PAYLOAD(rta);
 
-	if (!inet_ntop(ifa->ifa_family, src, buf, sizeof(buf)))
-		return NULL;
+	dest->family = ifa->ifa_family;
+	dest->prefixlen = ifa->ifa_prefixlen;
+	dest->raw = malloc(len);
+	if (!dest->raw)
+		return ENOMEM;
+	memcpy(dest->raw, RTA_DATA(rta), len);
+
+	if (!inet_ntop(ifa->ifa_family, RTA_DATA(rta), buf, sizeof(buf)))
+		return errno;
 	len = strlen(buf);
 	snprintf(buf + len, sizeof(buf) - len, "/%d", ifa->ifa_prefixlen);
-	return strdup(buf);
+	dest->formatted = strdup(buf);
+	if (!dest->formatted)
+		return ENOMEM;
+	return 0;
 }
-
 
 static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 {
@@ -100,7 +110,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 	struct nlmsghdr *n;
 	struct ifaddrmsg *ifa;
 	struct rtattr *rta_tb[IFA_MAX + 1];
-	int len;
+	int len, err;
 
 	for (; ainfo; ainfo = ainfo->next) {
 		n = &ainfo->h;
@@ -124,21 +134,18 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 		entry = calloc(sizeof(struct if_addr_entry), 1);
 		if (!entry)
 			return ENOMEM;
-		entry->family = ifa->ifa_family;
 
 		if (!rta_tb[IFA_LOCAL]) {
 			rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
 			rta_tb[IFA_ADDRESS] = NULL;
 		}
-		entry->addr = format_addr(ifa, RTA_DATA(rta_tb[IFA_LOCAL]));
-		if (!entry->addr)
-			return ENOMEM;
+		if ((err = store_addr(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
+			return err;
 		if (rta_tb[IFA_ADDRESS] &&
 		    memcmp(RTA_DATA(rta_tb[IFA_ADDRESS]), RTA_DATA(rta_tb[IFA_LOCAL]),
 			   ifa->ifa_family == AF_INET ? 4 : 16)) {
-			entry->peer = format_addr(ifa, RTA_DATA(rta_tb[IFA_ADDRESS]));
-			if (!entry->peer)
-				return ENOMEM;
+			if ((err = store_addr(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
+				return err;
 		}
 
 		if (!ptr)
@@ -197,8 +204,10 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 
 static void if_addr_destruct(struct if_addr_entry *entry)
 {
-	free(entry->addr);
-	free(entry->peer);
+	free(entry->addr.raw);
+	free(entry->addr.formatted);
+	free(entry->peer.raw);
+	free(entry->peer.formatted);
 }
 
 static void if_list_destruct(struct if_entry *entry)
