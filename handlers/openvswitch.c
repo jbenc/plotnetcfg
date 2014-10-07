@@ -271,6 +271,7 @@ static void add_table(JSON_Object *parmobj, char *table, ...)
 	json_object_set(tableobj, "columns", new);
 	while ((s = va_arg(ap, char *)))
 		json_array_append(cols, json_value_init_string(s));
+	va_end(ap);
 }
 
 static char *construct_query(void)
@@ -294,7 +295,7 @@ static char *construct_query(void)
 	po = json_object(new);
 	json_array_append(params, new);
 	add_table(po, "Open_vSwitch", "bridges", "ovs_version", NULL);
-	add_table(po, "Bridge", "name", "ports");
+	add_table(po, "Bridge", "name", "ports", NULL);
 	add_table(po, "Port", "interfaces", "name", "tag", "trunks", NULL);
 	add_table(po, "Interface", "name", "ifindex", "type", "options", "admin_state", "link_state", NULL);
 
