@@ -2,7 +2,8 @@ CFLAGS=-W -Wall
 
 plotnetcfg: dot.o ethtool.o handler.o if.o label.o main.o netns.o tunnel.o utils.o \
 	    parson/parson.o \
-	    handlers/master.o handlers/openvswitch.o handlers/veth.o handlers/vlan.o
+	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
+	    handlers/vlan.o
 	gcc -o $@ $+ /usr/lib64/libnetlink.a
 
 dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h
@@ -17,6 +18,7 @@ utils.o: utils.c utils.h if.h netns.h
 
 parson/parson.c: parson/parson.h
 
+handlers/bridge.o: handlers/bridge.c handlers/bridge.h handler.h
 handlers/master.o: handlers/master.c handlers/master.h handler.h utils.h
 handlers/openvswitch.o: handlers/openvswitch.h parson/parson.h handler.h label.h tunnel.h utils.h
 handlers/veth.o: handlers/veth.c handlers/veth.h handler.h utils.h
