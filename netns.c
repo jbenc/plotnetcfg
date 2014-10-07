@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "handler.h"
@@ -72,7 +73,7 @@ static int do_netns_switch(const char *path)
 	netns = open(path, O_RDONLY);
 	if (netns < 0)
 		return errno;
-	if (setns(netns, CLONE_NEWNET) < 0)
+	if (syscall(__NR_setns, netns, CLONE_NEWNET) < 0)
 		return errno;
 	close(netns);
 	return 0;

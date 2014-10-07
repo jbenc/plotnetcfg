@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../ethtool.h"
 #include "../handler.h"
 #include "../utils.h"

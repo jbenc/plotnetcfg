@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <string.h>
 #include "handler.h"
 #include "if.h"
 #include "netns.h"

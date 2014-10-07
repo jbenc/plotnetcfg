@@ -1,7 +1,9 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <net/if.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <libnetlink.h>
@@ -160,6 +162,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 int if_list(struct if_entry **result, struct netns_entry *ns)
 {
 	struct rtnl_handle rth = { .fd = -1 };
+	struct rtnl_dump_filter_arg farg[2];
 	struct nlmsg_chain linfo = { NULL, NULL };
 	struct nlmsg_chain ainfo = { NULL, NULL };
 	struct nlmsg_list *l;
@@ -172,12 +175,18 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 		return errno ? errno : -1;
 	if (rtnl_wilddump_request(&rth, AF_UNSPEC, RTM_GETLINK) < 0)
 		return errno ? errno : -1;
-	if (rtnl_dump_filter(&rth, store_nlmsg, &linfo) < 0)
+	memset(farg, 0, sizeof(farg));
+	farg[0].filter = store_nlmsg;
+	farg[0].arg1 = &linfo;
+	if (rtnl_dump_filter_l(&rth, farg) < 0)
 		return errno ? errno : -1;
 
 	if (rtnl_wilddump_request(&rth, AF_UNSPEC, RTM_GETADDR) < 0)
 		return errno ? errno : -1;
-	if (rtnl_dump_filter(&rth, store_nlmsg, &ainfo) < 0)
+	memset(farg, 0, sizeof(farg));
+	farg[0].filter = store_nlmsg;
+	farg[0].arg1 = &ainfo;
+	if (rtnl_dump_filter_l(&rth, farg) < 0)
 		return errno ? errno : -1;
 
 	for (l = linfo.head; l; l = l->next) {

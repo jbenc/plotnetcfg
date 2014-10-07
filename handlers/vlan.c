@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#include <stdio.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <libnetlink.h>
 #include <errno.h>

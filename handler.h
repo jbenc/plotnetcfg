@@ -1,5 +1,7 @@
 #ifndef _HANDLER_H
 #define _HANDLER_H
+#include <stdio.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <libnetlink.h>
 #include "if.h"
