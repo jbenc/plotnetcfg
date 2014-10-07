@@ -16,13 +16,15 @@
 
 #define NETNS_RUN_DIR "/var/run/netns"
 
-static int netns_get_list(struct netns_entry **result)
+static int netns_get_list(struct netns_entry **result, int supported)
 {
 	struct netns_entry *entry, *ptr;
 	struct dirent *de;
 	DIR *dir;
 
 	*result = ptr = calloc(sizeof(struct netns_entry), 1);
+	if (!supported)
+		return 0;
 	dir = opendir(NETNS_RUN_DIR);
 	if (!dir)
 		return 0;
@@ -45,12 +47,12 @@ static int netns_get_list(struct netns_entry **result)
 	return 0;
 }
 
-int netns_list(struct netns_entry **result)
+int netns_list(struct netns_entry **result, int supported)
 {
 	struct netns_entry *entry;
 	int err;
 
-	if ((err = netns_get_list(result)))
+	if ((err = netns_get_list(result, supported)))
 		return err;
 	for (entry = *result; entry; entry = entry->next) {
 		if (entry->name)
@@ -89,7 +91,12 @@ int netns_switch(struct netns_entry *dest)
 
 int netns_switch_root(void)
 {
-	return do_netns_switch("/proc/1/ns/net");
+	int res;
+
+	res = do_netns_switch("/proc/1/ns/net");
+	if (res == ENOENT)
+		return -1;
+	return res;
 }
 
 static void netns_list_destruct(struct netns_entry *entry)

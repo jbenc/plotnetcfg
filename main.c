@@ -42,20 +42,21 @@ static int check_caps(void)
 int main(_unused int argc, _unused char **argv)
 {
 	struct netns_entry *root;
-	int err;
+	int netns_ok, err;
 
 	if (!check_caps()) {
 		fprintf(stderr, "Must be run under root (or with enough capabilities).\n");
 		exit(1);
 	}
-	if ((err = netns_switch_root())) {
-		fprintf(stderr, "Cannot change to the root name space: %s\n", strerror(err));
+	netns_ok = netns_switch_root();
+	if (netns_ok > 0) {
+		fprintf(stderr, "Cannot change to the root name space: %s\n", strerror(netns_ok));
 		exit(1);
 	}
 
 	register_handlers();
 
-	if ((err = netns_list(&root))) {
+	if ((err = netns_list(&root, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
 		exit(1);
 	}
