@@ -99,10 +99,10 @@ void dot_output(struct netns_entry *root)
 	printf("digraph {\nnode [shape=box]\n");
 	for (ns = root; ns; ns = ns->next) {
 		if (ns->name)
-			printf("subgraph cluster_%s {\nlabel=\"%s\"\n", ns->name, ns->name);
+			printf("subgraph \"cluster_%s\" {\nlabel=\"%s\"\n", ns->name, ns->name);
 		output_ifaces_pass1(ns->ifaces);
 		if (ns->name)
-			printf("}");
+			printf("}\n");
 	}
 	for (ns = root; ns; ns = ns->next) {
 		output_ifaces_pass2(ns->ifaces);
