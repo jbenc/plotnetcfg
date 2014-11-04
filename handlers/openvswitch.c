@@ -370,21 +370,28 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	int search_for_system = !iface->bridge->system->link;
 	int weight;
 
-	if (iface->if_index != entry->if_index)
-		return 0;
 	if (!search_for_system &&
 	    entry->master && strcmp(entry->master->if_name, "ovs-system"))
+		return 0;
+	/* Ignore ifindex reported by ovsdb, as it is guessed by the
+	 * interface name anyway and does not work correctly accross netns.
+	 * The heuristics below is much more reliable, though obviously far
+	 * from good, it fails spectacularly when the netdev interface is
+	 * renamed.
+	 */
+	if (strcmp(iface->name, entry->if_name))
+		return 0;
+	if (!strcmp(iface->type, "internal") &&
+	    strcmp(entry->driver, "openvswitch"))
 		return 0;
 	weight = 1;
 	if (!search_for_system) {
 		if (iface->bridge->system->link->ns == entry->ns)
-			weight += 2;
+			weight++;
 	} else {
 		if (!entry->ns->name)
-			weight += 2;
+			weight++;
 	}
-	if (!strcmp(iface->name, entry->if_name))
-		weight++;
 	return weight;
 }
 
@@ -392,7 +399,7 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root)
 {
 	int err;
 
-	if (!iface->if_index || iface->link)
+	if (iface->link)
 		return 0;
 	err = find_interface(&iface->link, root, 1, NULL, link_iface_search, iface);
 	if (err > 0)
@@ -401,11 +408,6 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root)
 		fprintf(stderr, "ERROR: cannot map openvswitch interface %s reliably.\n",
 			iface->name);
 		return EEXIST;
-	}
-	if (!iface->link) {
-		fprintf(stderr, "ERROR: cannot map openvswitch interface %s.\n",
-			iface->name);
-		return ENOENT;
 	}
 	return 0;
 }
@@ -477,19 +479,24 @@ static int link_ifaces(struct netns_entry *root)
 		}
 		if ((err = link_iface(br->system, root)))
 			return err;
+		if (!br->system->link) {
+			fprintf(stderr, "ERROR: cannot map openvswitch interface %s.\n",
+				br->system->name);
+			return ENOENT;
+		}
 		for (iface = br->ifaces; iface; iface = iface->next) {
 			if (iface == br->system)
 				continue;
-			if (iface->if_index)
-				err = link_iface(iface, root);
-			else
-				err = create_iface(iface, root);
-			if (err)
+			if ((err = link_iface(iface, root)))
 				return err;
-			if (iface->link) {
-				/* reconnect to the ovs master */
-				iface->link->master = br->system->link;
+			if (!iface->link) {
+				if ((err = create_iface(iface, root)))
+					return err;
 			}
+
+			/* reconnect to the ovs master */
+			iface->link->master = br->system->link;
+
 			label_iface(iface);
 			if (!strcmp(iface->type, "vxlan"))
 				link_vxlan(iface);
