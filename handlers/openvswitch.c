@@ -48,6 +48,8 @@ struct ovs_if {
 	/* for vxlan: */
 	char *local_ip;
 	char *remote_ip;
+	/* for patch port: */
+	char *peer;
 };
 
 struct ovs_bridge {
@@ -111,6 +113,18 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 				iface->local_ip = strdup(val);
 			else if (!strcmp(key, "remote_ip"))
 				iface->remote_ip = strdup(val);
+		}
+	} else if (!strcmp(iface->type, "patch") && is_map(jarr)) {
+		jarr = json_array_get_array(jarr, 1);
+		for (i = 0; i < json_array_get_count(jarr); i++) {
+			JSON_Array *jkv;
+			const char *key, *val;
+
+			jkv = json_array_get_array(jarr, i);
+			key = json_array_get_string(jkv, 0);
+			val = json_array_get_string(jkv, 1);
+			if (!strcmp(key, "peer"))
+				iface->peer = strdup(val);
 		}
 	}
 	return iface;
@@ -460,6 +474,36 @@ static void link_vxlan(struct ovs_if *iface)
 	iface->link->peer = tunnel_find_iface(iface->link->ns, iface->local_ip);
 }
 
+static int link_patch_search(struct if_entry *entry, void *arg)
+{
+	struct ovs_if *iface = arg;
+
+	if (!iface->peer ||
+	    strcmp(iface->peer, entry->if_name) ||
+	    !(entry->flags & IF_INTERNAL))
+		return 0;
+	return 1;
+}
+
+static int link_patch(struct ovs_if *iface, struct netns_entry *root)
+{
+	int err;
+
+	err = find_interface(&iface->link->peer, root, 1, NULL, link_patch_search, iface);
+	if (err > 0)
+		return err;
+	if (err < 0) {
+		fprintf(stderr, "ERROR: cannot find peer for openvswitch patch port %s reliably.\n",
+			iface->name);
+		return EEXIST;
+	}
+	if (iface->link->peer)
+		iface->link->peer->peer = iface->link;
+	/* Ignore case when the peer is not found, it will be found from the
+	 * other side. */
+	return 0;
+}
+
 static int link_ifaces(struct netns_entry *root)
 {
 	struct ovs_bridge *br;
@@ -495,6 +539,10 @@ static int link_ifaces(struct netns_entry *root)
 			label_iface(iface);
 			if (!strcmp(iface->type, "vxlan"))
 				link_vxlan(iface);
+			else if (!strcmp(iface->type, "patch")) {
+				if ((err = link_patch(iface, root)))
+					return err;
+			}
 		}
 	}
 	return 0;
