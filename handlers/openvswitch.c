@@ -39,7 +39,6 @@ struct ovs_if {
 	struct ovs_if *next;
 	struct ovs_bridge *bridge;
 	struct if_entry *link;
-	unsigned int if_index;
 	char *name;
 	char *type;
 	/* vlan tags: */
@@ -84,7 +83,6 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 {
 	struct ovs_if *iface;
 	JSON_Object *jif;
-	JSON_Value *jval;
 	JSON_Array *jarr;
 	unsigned int i;
 
@@ -97,9 +95,6 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 	iface = calloc(sizeof(*iface), 1);
 	if (!iface)
 		return NULL;
-	jval = json_object_get_value(jif, "ifindex");
-	if (!is_empty(jval))
-		iface->if_index = json_number(jval);
 	iface->name = strdup(json_object_get_string(jif, "name"));
 	iface->type = strdup(json_object_get_string(jif, "type"));
 	jarr = json_object_get_array(jif, "options");
@@ -312,7 +307,7 @@ static char *construct_query(void)
 	add_table(po, "Open_vSwitch", "bridges", "ovs_version", NULL);
 	add_table(po, "Bridge", "name", "ports", NULL);
 	add_table(po, "Port", "interfaces", "name", "tag", "trunks", NULL);
-	add_table(po, "Interface", "name", "ifindex", "type", "options", "admin_state", "link_state", NULL);
+	add_table(po, "Interface", "name", "type", "options", "admin_state", "link_state", NULL);
 
 	res = json_serialize(root);
 	json_value_free(root);
