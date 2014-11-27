@@ -1,3 +1,30 @@
+plotnetcfg is a tool that scans networking configuration on the machine and
+plots a diagram of the configuration hierarchy.
+
+Design goals are:
+1. Lighweight. It should have no run time dependencies. Just scp the
+   binary to the target machine.
+2. Works across net namespaces.
+3. Allows multiple frontends. (Right now, only graphviz fronted is
+   implemented.)
+
+
+Example usage:
+
+ssh target_machine plotnetcfg | dot -Tpdf > output.pdf
+
+
+Building:
+
+libnetlink static library from iproute2 is needed. Look for a package named
+iproute-devel or similar.
+
+
+Bugs:
+
+Report bugs to jbenc@redhat.com. Patches are welcome.
+
+
 Contains code from iproute2, originally licensed under GPLv2 or later,
 http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2
 
