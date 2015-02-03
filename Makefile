@@ -1,10 +1,11 @@
+libnetlink_path=/usr/lib64/libnetlink.a
 CFLAGS=-W -Wall
 
 plotnetcfg: dot.o ethtool.o handler.o if.o label.o main.o netns.o tunnel.o utils.o \
 	    parson/parson.o \
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
 	    handlers/vlan.o
-	gcc -o $@ $+ /usr/lib64/libnetlink.a
+	gcc -o $@ $+ $(libnetlink_path)
 
 dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h
 ethtool.o: ethtool.c ethtool.h

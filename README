@@ -16,8 +16,9 @@ ssh target_machine plotnetcfg | dot -Tpdf > output.pdf
 
 Building:
 
-libnetlink static library from iproute2 is needed. Look for a package named
-iproute-devel or similar.
+libnetlink static library from iproute2 is needed (look for a package named
+iproute-devel or similar). Edit Makefile and change the first line to point
+to the correct location of the library.
 
 
 Bugs:
