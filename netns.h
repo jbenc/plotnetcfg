@@ -21,7 +21,11 @@ struct if_entry;
 struct netns_entry {
 	struct netns_entry *next;
 	struct if_entry *ifaces;
+	long kernel_id;
+	/* name is NULL for root name space, for other name spaces it
+	 * contains human recognizable identifier */
 	char *name;
+	int fd;
 };
 
 int netns_list(struct netns_entry **result, int supported);
