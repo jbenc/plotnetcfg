@@ -16,6 +16,8 @@
 #ifndef _NETNS_H
 #define _NETNS_H
 
+#include <sys/types.h>
+
 struct if_entry;
 
 struct netns_entry {
@@ -25,6 +27,7 @@ struct netns_entry {
 	/* name is NULL for root name space, for other name spaces it
 	 * contains human recognizable identifier */
 	char *name;
+	pid_t pid;
 	int fd;
 };
 

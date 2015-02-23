@@ -54,14 +54,15 @@ static long netns_get_kernel_id(const char *path)
 	return result;
 }
 
-static int netns_check_duplicate(struct netns_entry *root, long int kernel_id)
+static struct netns_entry *netns_check_duplicate(struct netns_entry *root,
+						 long int kernel_id)
 {
 	while (root) {
 		if (root->kernel_id == kernel_id)
-			return 1;
+			return root;
 		root = root->next;
 	}
-	return 0;
+	return NULL;
 }
 
 static int netns_get_var_entry(struct netns_entry **result,
@@ -101,38 +102,14 @@ static int netns_get_var_entry(struct netns_entry **result,
 	return netns_switch_root();
 }
 
-static int netns_get_proc_entry(struct netns_entry **result,
-				struct netns_entry *root,
-				const char *pid)
+static void netns_proc_entry_set_name(struct netns_entry *entry,
+				      const char *spid)
 {
-	struct netns_entry *entry;
 	char path[PATH_MAX], buf[PATH_MAX];
-	long kernel_id;
 	ssize_t len;
 	int commfd;
 
-	snprintf(path, sizeof(path), "/proc/%s/ns/net", pid);
-	kernel_id = netns_get_kernel_id(path);
-	if (kernel_id < 0) {
-		/* ignore entries that cannot be read */
-		return -1;
-	}
-	if (netns_check_duplicate(root, kernel_id))
-		return -1;
-
-	*result = entry = calloc(sizeof(struct netns_entry), 1);
-	if (!entry)
-		return ENOMEM;
-
-	entry->kernel_id = kernel_id;
-	entry->fd = open(path, O_RDONLY);
-	if (entry->fd < 0) {
-		/* ignore entries that cannot be read */
-		free(entry);
-		return -1;
-	}
-
-	snprintf(path, sizeof(path), "/proc/%s/comm", pid);
+	snprintf(path, sizeof(path), "/proc/%s/comm", spid);
 	commfd = open(path, O_RDONLY);
 	len = -1;
 	if (commfd >= 0) {
@@ -145,12 +122,52 @@ static int netns_get_proc_entry(struct netns_entry **result,
 		close(commfd);
 	}
 	if (len >= 0)
-		snprintf(buf, sizeof(buf), "PID %s (%s)", pid, path);
+		snprintf(buf, sizeof(buf), "PID %s (%s)", spid, path);
 	else
-		snprintf(buf, sizeof(buf), "PID %s", pid);
+		snprintf(buf, sizeof(buf), "PID %s", spid);
 	entry->name = strdup(buf);
 	if (!entry->name)
+		entry->name = "?";
+}
+
+static int netns_get_proc_entry(struct netns_entry **result,
+				struct netns_entry *root,
+				const char *spid)
+{
+	struct netns_entry *entry, *dup;
+	char path[PATH_MAX];
+	pid_t pid;
+	long kernel_id;
+
+	snprintf(path, sizeof(path), "/proc/%s/ns/net", spid);
+	kernel_id = netns_get_kernel_id(path);
+	if (kernel_id < 0) {
+		/* ignore entries that cannot be read */
+		return -1;
+	}
+	pid = atol(spid);
+	dup = netns_check_duplicate(root, kernel_id);
+	if (dup) {
+		if (dup->pid && (dup->pid > pid)) {
+			dup->pid = pid;
+			netns_proc_entry_set_name(dup, spid);
+		}
+		return -1;
+	}
+
+	*result = entry = calloc(sizeof(struct netns_entry), 1);
+	if (!entry)
 		return ENOMEM;
+
+	entry->kernel_id = kernel_id;
+	entry->pid = pid;
+	entry->fd = open(path, O_RDONLY);
+	if (entry->fd < 0) {
+		/* ignore entries that cannot be read */
+		free(entry);
+		return -1;
+	}
+	netns_proc_entry_set_name(entry, spid);
 	return 0;
 }
 
