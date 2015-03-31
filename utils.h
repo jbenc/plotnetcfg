@@ -20,6 +20,8 @@ struct if_entry;
 
 #define _unused __attribute__((unused))
 
+#define ARRAY_SIZE(a)	(sizeof(a) / sizeof(*a))
+
 typedef void (*destruct_f)(void *);
 void list_free(void *list, destruct_f destruct);
 

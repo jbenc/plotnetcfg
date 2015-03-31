@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include "args.h"
 #include "dot.h"
 #include "netns.h"
 #include "utils.h"
@@ -39,6 +40,20 @@ static void register_handlers(void)
 	handler_bridge_register();
 }
 
+static int print_help(_unused char *arg)
+{
+	printf("Usage: plotnetcfg [OPTION]...\n\n");
+	arg_get_help((arg_help_handler_t)puts);
+	return 1;
+}
+
+static struct arg_option options[] = {
+	{ .long_name = "help", .short_name = 'h',
+	  .type = ARG_CALLBACK, .action.callback = print_help,
+	  .help = "print help and exit",
+	},
+};
+
 static int check_caps(void)
 {
 	struct __user_cap_header_struct caps_hdr;
@@ -54,7 +69,7 @@ static int check_caps(void)
 	return 1;
 }
 
-int main(_unused int argc, _unused char **argv)
+int main(int argc, char **argv)
 {
 	struct netns_entry *root;
 	int netns_ok, err;
@@ -69,7 +84,10 @@ int main(_unused int argc, _unused char **argv)
 		exit(1);
 	}
 
+	arg_register_batch(options, ARRAY_SIZE(options));
 	register_handlers();
+	if ((err = arg_parse(argc, argv)))
+		exit(err);
 
 	if ((err = netns_list(&root, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));

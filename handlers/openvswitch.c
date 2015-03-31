@@ -24,6 +24,7 @@
 #include <linux/un.h>
 #include <net/if.h>
 #include <unistd.h>
+#include "../args.h"
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
@@ -33,7 +34,8 @@
 #include "../parson/parson.h"
 #include "openvswitch.h"
 
-static char db[] = "/var/run/openvswitch/db.sock";
+#define OVS_DB_DEFAULT	"/var/run/openvswitch/db.sock";
+static char *db;
 
 struct ovs_if {
 	struct ovs_if *next;
@@ -600,7 +602,15 @@ static struct global_handler gh_ovs = {
 	.cleanup = ovs_global_cleanup,
 };
 
+static struct arg_option options[] = {
+	{ .long_name = "ovs-db", .short_name = 'D', .has_arg = 1,
+	  .type = ARG_CHAR, .action.char_var = &db,
+	  .help = "path to openvswitch database" },
+};
+
 void handler_ovs_register(void)
 {
+	db = OVS_DB_DEFAULT;
+	arg_register_batch(options, ARRAY_SIZE(options));
 	global_handler_register(&gh_ovs);
 }
