@@ -74,6 +74,11 @@ int main(int argc, char **argv)
 	struct netns_entry *root;
 	int netns_ok, err;
 
+	arg_register_batch(options, ARRAY_SIZE(options));
+	register_handlers();
+	if ((err = arg_parse(argc, argv)))
+		exit(err);
+
 	if (!check_caps()) {
 		fprintf(stderr, "Must be run under root (or with enough capabilities).\n");
 		exit(1);
@@ -83,11 +88,6 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Cannot change to the root name space: %s\n", strerror(netns_ok));
 		exit(1);
 	}
-
-	arg_register_batch(options, ARRAY_SIZE(options));
-	register_handlers();
-	if ((err = arg_parse(argc, argv)))
-		exit(err);
 
 	if ((err = netns_list(&root, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
