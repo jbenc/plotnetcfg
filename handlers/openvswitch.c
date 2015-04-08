@@ -39,14 +39,10 @@ static char *db;
 
 struct ovs_if {
 	struct ovs_if *next;
-	struct ovs_bridge *bridge;
+	struct ovs_port *port;
 	struct if_entry *link;
 	char *name;
 	char *type;
-	/* vlan tags: */
-	unsigned int tag;
-	unsigned int trunks_count;
-	unsigned int *trunks;
 	/* for vxlan: */
 	char *local_ip;
 	char *remote_ip;
@@ -54,11 +50,24 @@ struct ovs_if {
 	char *peer;
 };
 
+struct ovs_port {
+	struct ovs_port *next;
+	struct ovs_bridge *bridge;
+	struct if_entry *link;
+	char *name;
+	struct ovs_if *ifaces;
+	int iface_count;
+	/* vlan tags: */
+	unsigned int tag;
+	unsigned int trunks_count;
+	unsigned int *trunks;
+};
+
 struct ovs_bridge {
 	struct ovs_bridge *next;
 	char *name;
-	struct ovs_if *ifaces;
-	struct ovs_if *system;
+	struct ovs_port *ports;
+	struct ovs_port *system;
 };
 
 static struct ovs_bridge *br_list;
@@ -132,7 +141,7 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 	return iface;
 }
 
-static int parse_vlan_info(struct ovs_if *iface, JSON_Object *jport)
+static int parse_vlan_info(struct ovs_port *port, JSON_Object *jport)
 {
 	JSON_Value *jval;
 	JSON_Array *jarr;
@@ -140,25 +149,26 @@ static int parse_vlan_info(struct ovs_if *iface, JSON_Object *jport)
 
 	jval = json_object_get_value(jport, "tag");
 	if (!is_empty(jval))
-		iface->tag = json_number(jval);
+		port->tag = json_number(jval);
 	jarr = json_object_get_array(jport, "trunks");
 	jarr = json_array_get_array(jarr, 1);
 	cnt = json_array_get_count(jarr);
 	if (cnt > 0) {
-		iface->trunks = malloc(sizeof(*iface->trunks) * cnt);
-		if (!iface->trunks)
+		port->trunks = malloc(sizeof(*port->trunks) * cnt);
+		if (!port->trunks)
 			return ENOMEM;
-		iface->trunks_count = cnt;
+		port->trunks_count = cnt;
 		for (i = 0; i < cnt; i++)
-			iface->trunks[i] = json_array_get_number(jarr, i);
+			port->trunks[i] = json_array_get_number(jarr, i);
 	}
 	return 0;
 }
 
-static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
-				 struct ovs_bridge *br)
+static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
+				   struct ovs_bridge *br)
 {
-	struct ovs_if *list = NULL, *ptr, *iface;
+	struct ovs_port *port;
+	struct ovs_if *ptr, *iface;
 	JSON_Object *jport;
 	JSON_Array *jarr;
 	unsigned int i;
@@ -169,6 +179,13 @@ static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 	jport = json_object_get_object(jport, json_array_get_string(uuid, 1));
 	jport = json_object_get_object(jport, "new");
 
+	port = calloc(sizeof(*port), 1);
+	if (!port)
+		return NULL;
+	port->name = strdup(json_object_get_string(jport, "name"));
+	port->bridge = br;
+	if (parse_vlan_info(port, jport))
+		return NULL;
 	jarr = json_object_get_array(jport, "interfaces");
 	if (is_set(jarr)) {
 		jarr = json_array_get_array(jarr, 1);
@@ -176,34 +193,33 @@ static struct ovs_if *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 			iface = parse_iface(jresult, json_array_get_array(jarr, i));
 			if (!iface)
 				return NULL;
-			iface->bridge = br;
-			if (parse_vlan_info(iface, jport))
-				return NULL;
-			if (!list)
-				list = iface;
+			iface->port = port;
+			if (!port->ifaces)
+				port->ifaces = iface;
 			else
 				ptr->next = iface;
 			ptr = iface;
+			port->iface_count++;
 		}
 	} else {
-		list = parse_iface(jresult, jarr);
-		if (!list)
+		iface = parse_iface(jresult, jarr);
+		if (!iface)
 			return NULL;
-		list->bridge = br;
-		if (parse_vlan_info(list, jport))
-			return NULL;
+		iface->port = port;
+		port->ifaces = iface;
+		port->iface_count = 1;
 	}
 
 	if (!strcmp(json_object_get_string(jport, "name"), br->name))
-		br->system = list;
+		br->system = port;
 
-	return list;
+	return port;
 }
 
 static struct ovs_bridge *parse_bridge(JSON_Object *jresult, JSON_Array *uuid)
 {
 	struct ovs_bridge *br;
-	struct ovs_if *ptr, *iface;
+	struct ovs_port *ptr, *port;
 	JSON_Object *jbridge;
 	JSON_Array *jarr;
 	unsigned int i;
@@ -222,20 +238,18 @@ static struct ovs_bridge *parse_bridge(JSON_Object *jresult, JSON_Array *uuid)
 	if (is_set(jarr)) {
 		jarr = json_array_get_array(jarr, 1);
 		for (i = 0; i < json_array_get_count(jarr); i++) {
-			iface = parse_port(jresult, json_array_get_array(jarr, i), br);
-			if (!iface)
+			port = parse_port(jresult, json_array_get_array(jarr, i), br);
+			if (!port)
 				return NULL;
-			if (!br->ifaces)
-				br->ifaces = iface;
+			if (!br->ports)
+				br->ports = port;
 			else
-				ptr->next = iface;
-			ptr = iface;
-			while (ptr->next)
-				ptr = ptr->next;
+				ptr->next = port;
+			ptr = port;
 		}
 	} else
-		br->ifaces = parse_port(jresult, jarr, br);
-	if (!br->ifaces)
+		br->ports = parse_port(jresult, jarr, br);
+	if (!br->ports)
 		return NULL;
 	return br;
 }
@@ -378,7 +392,7 @@ static char *read_all(int fd)
 static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
-	int search_for_system = !iface->bridge->system->link;
+	int search_for_system = !iface->port->bridge->system->link;
 	int weight;
 
 	if (!search_for_system &&
@@ -397,7 +411,7 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 		return 0;
 	weight = 1;
 	if (!search_for_system) {
-		if (iface->bridge->system->link->ns == entry->ns)
+		if (iface->port->bridge->system->link->ns == entry->ns)
 			weight++;
 	} else {
 		if (!entry->ns->name)
@@ -435,7 +449,7 @@ static int create_iface(struct ovs_if *iface, struct netns_entry *root)
 	if (!entry)
 		return ENOMEM;
 	entry->ns = root;
-	snprintf(buf, sizeof(buf), "ovs:%s", iface->bridge->name);
+	snprintf(buf, sizeof(buf), "ovs:%s", iface->port->bridge->name);
 	entry->internal_ns = strdup(buf);
 	entry->if_name = strdup(iface->name);
 	if (!entry->internal_ns || !entry->if_name)
@@ -456,18 +470,18 @@ static void label_iface(struct ovs_if *iface)
 	if (iface->remote_ip)
 		label_add(&iface->link->label, "to %s", iface->remote_ip);
 
-	if (iface->tag)
-		 asprintf(&iface->link->edge_label, "tag %u", iface->tag);
-	else if (iface->trunks_count) {
+	if (iface->port->tag)
+		 asprintf(&iface->link->edge_label, "tag %u", iface->port->tag);
+	else if (iface->port->trunks_count) {
 		char *buf, *ptr;
 		unsigned int i;
 
-		buf = malloc(16 * iface->trunks_count + 7 + 1);
+		buf = malloc(16 * iface->port->trunks_count + 7 + 1);
 		if (!buf)
 			return;
-		ptr = buf + sprintf(buf, "trunks %u", iface->trunks[0]);
-		for (i = 1; i < iface->trunks_count; i++)
-			ptr += sprintf(ptr, ", %u", iface->trunks[i]);
+		ptr = buf + sprintf(buf, "trunks %u", iface->port->trunks[0]);
+		for (i = 1; i < iface->port->trunks_count; i++)
+			ptr += sprintf(ptr, ", %u", iface->port->trunks[i]);
 		iface->link->edge_label = buf;
 	}
 }
@@ -509,35 +523,42 @@ static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 static int link_ifaces(struct netns_entry *root)
 {
 	struct ovs_bridge *br;
+	struct ovs_port *port;
 	struct ovs_if *iface;
 	int err;
 
 	for (br = br_list; br; br = br->next) {
-		if (!br->system)
+		if (!br->system || !br->system->iface_count)
 			return label_add(&root->warnings,
 					 "Failed to find main interface for openvswitch bridge %s",
 					 br->name);
-		if ((err = link_iface(br->system, root, 1)))
+		if (br->system->iface_count > 1)
+			return label_add(&root->warnings,
+					 "Main port for openvswitch bridge %s appears to have several interfaces",
+					 br->name);
+		if ((err = link_iface(br->system->ifaces, root, 1)))
 			return err;
-		for (iface = br->ifaces; iface; iface = iface->next) {
-			if (iface == br->system)
+		for (port = br->ports; port; port = port->next) {
+			if (port == br->system)
 				continue;
-			if ((err = link_iface(iface, root, 0)))
-				return err;
-			if (!iface->link) {
-				if ((err = create_iface(iface, root)))
+			for (iface = port->ifaces; iface; iface = iface->next) {
+				if ((err = link_iface(iface, root, 0)))
 					return err;
-			}
+				if (!iface->link) {
+					if ((err = create_iface(iface, root)))
+						return err;
+				}
 
-			/* reconnect to the ovs master */
-			iface->link->master = br->system->link;
+				/* reconnect to the ovs master */
+				iface->link->master = br->system->ifaces->link;
 
-			label_iface(iface);
-			if (!strcmp(iface->type, "vxlan"))
-				link_vxlan(iface);
-			else if (!strcmp(iface->type, "patch")) {
-				if ((err = link_patch(iface, root)))
-					return err;
+				label_iface(iface);
+				if (!strcmp(iface->type, "vxlan"))
+					link_vxlan(iface);
+				else if (!strcmp(iface->type, "patch")) {
+					if ((err = link_patch(iface, root)))
+						return err;
+				}
 			}
 		}
 	}
@@ -575,15 +596,21 @@ static void destruct_if(struct ovs_if *iface)
 {
 	free(iface->name);
 	free(iface->type);
-	free(iface->trunks);
 	free(iface->local_ip);
 	free(iface->remote_ip);
+}
+
+static void destruct_port(struct ovs_port *port)
+{
+	free(port->name);
+	free(port->trunks);
+	list_free(port->ifaces, (destruct_f)destruct_if);
 }
 
 static void destruct_bridge(struct ovs_bridge *br)
 {
 	free(br->name);
-	list_free(br->ifaces, (destruct_f)destruct_if);
+	list_free(br->ports, (destruct_f)destruct_port);
 }
 
 static void ovs_global_cleanup(_unused struct netns_entry *root)
