@@ -440,25 +440,24 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root, int requir
 	return 0;
 }
 
-static int create_iface(struct ovs_if *iface, struct netns_entry *root)
+static struct if_entry *create_iface(char *name, char *br_name, struct netns_entry *root)
 {
 	struct if_entry *entry;
 	char buf[IFNAMSIZ + 4 + 1];
 
 	entry = calloc(sizeof(*entry), 1);
 	if (!entry)
-		return ENOMEM;
+		return NULL;
 	entry->ns = root;
-	snprintf(buf, sizeof(buf), "ovs:%s", iface->port->bridge->name);
+	snprintf(buf, sizeof(buf), "ovs:%s", br_name);
 	entry->internal_ns = strdup(buf);
-	entry->if_name = strdup(iface->name);
+	entry->if_name = strdup(name);
 	if (!entry->internal_ns || !entry->if_name)
-		return ENOMEM;
+		return NULL;
 	entry->flags |= IF_INTERNAL;
 
 	if_append(&root->ifaces, entry);
-	iface->link = entry;
-	return 0;
+	return entry;
 }
 
 static void label_iface(struct ovs_if *iface)
@@ -469,20 +468,23 @@ static void label_iface(struct ovs_if *iface)
 		label_add(&iface->link->label, "from %s", iface->local_ip);
 	if (iface->remote_ip)
 		label_add(&iface->link->label, "to %s", iface->remote_ip);
+}
 
-	if (iface->port->tag)
-		 asprintf(&iface->link->edge_label, "tag %u", iface->port->tag);
-	else if (iface->port->trunks_count) {
+static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
+{
+	if (port->tag)
+		 asprintf(&link->edge_label, "tag %u", port->tag);
+	else if (port->trunks_count) {
 		char *buf, *ptr;
 		unsigned int i;
 
-		buf = malloc(16 * iface->port->trunks_count + 7 + 1);
+		buf = malloc(16 * port->trunks_count + 7 + 1);
 		if (!buf)
 			return;
-		ptr = buf + sprintf(buf, "trunks %u", iface->port->trunks[0]);
-		for (i = 1; i < iface->port->trunks_count; i++)
-			ptr += sprintf(ptr, ", %u", iface->port->trunks[i]);
-		iface->link->edge_label = buf;
+		ptr = buf + sprintf(buf, "trunks %u", port->trunks[0]);
+		for (i = 1; i < port->trunks_count; i++)
+			ptr += sprintf(ptr, ", %u", port->trunks[i]);
+		link->edge_label = buf;
 	}
 }
 
@@ -525,6 +527,7 @@ static int link_ifaces(struct netns_entry *root)
 	struct ovs_bridge *br;
 	struct ovs_port *port;
 	struct ovs_if *iface;
+	struct if_entry *master;
 	int err;
 
 	for (br = br_list; br; br = br->next) {
@@ -541,18 +544,32 @@ static int link_ifaces(struct netns_entry *root)
 		for (port = br->ports; port; port = port->next) {
 			if (port == br->system)
 				continue;
+			master = br->system->ifaces->link;
+			if (port->iface_count > 1) {
+				port->link = create_iface(port->name, port->bridge->name, root);
+				if (!port->link)
+					return ENOMEM;
+				port->link->master = master;
+				master = port->link;
+				label_port_or_iface(port, port->link);
+			}
 			for (iface = port->ifaces; iface; iface = iface->next) {
 				if ((err = link_iface(iface, root, 0)))
 					return err;
 				if (!iface->link) {
-					if ((err = create_iface(iface, root)))
-						return err;
+					iface->link = create_iface(iface->name,
+								   iface->port->bridge->name,
+								   root);
+					if (!iface->link)
+						return ENOMEM;
 				}
 
 				/* reconnect to the ovs master */
-				iface->link->master = br->system->ifaces->link;
+				iface->link->master = master;
 
 				label_iface(iface);
+				if (port->iface_count == 1)
+					label_port_or_iface(port, iface->link);
 				if (!strcmp(iface->type, "vxlan"))
 					link_vxlan(iface);
 				else if (!strcmp(iface->type, "patch")) {
