@@ -24,6 +24,7 @@
 #include "dot.h"
 #include "netns.h"
 #include "utils.h"
+#include "version.h"
 #include "handler.h"
 #include "handlers/bridge.h"
 #include "handlers/master.h"
@@ -47,10 +48,20 @@ static int print_help(_unused char *arg)
 	return 1;
 }
 
+static int print_version(_unused char *arg)
+{
+	printf("%s\n", VERSION);
+	return 1;
+}
+
 static struct arg_option options[] = {
 	{ .long_name = "help", .short_name = 'h',
 	  .type = ARG_CALLBACK, .action.callback = print_help,
 	  .help = "print help and exit",
+	},
+	{ .long_name = "version", .short_name = '\0',
+	  .type = ARG_CALLBACK, .action.callback = print_version,
+	  .help = "print version and exit",
 	},
 };
 
