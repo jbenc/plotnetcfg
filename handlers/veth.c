@@ -66,15 +66,9 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 	err = find_interface(&entry->peer, root, 1, entry, match_peer, entry);
 	if (err > 0)
 		return err;
-	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot find the veth peer for %s reliably.\n",
-			ifstr(entry));
-		return EEXIST;
-	}
-	if (!entry->peer) {
-		fprintf(stderr, "ERROR: cannot find the veth peer for %s.\n",
-			ifstr(entry));
-		return ENOENT;
-	}
+	if (err < 0)
+		return if_add_warning(entry, "failed to find the veth peer reliably");
+	if (!entry->peer)
+		return if_add_warning(entry, "failed to find the veth perr");
 	return 0;
 }

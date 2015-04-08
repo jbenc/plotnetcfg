@@ -50,6 +50,7 @@ struct if_entry {
 	struct if_addr_entry *addr;
 	char *edge_label;
 	void *handler_private;
+	int warnings;
 };
 
 #define IF_UP		1
@@ -60,5 +61,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);
 
 void if_append(struct if_entry **list, struct if_entry *item);
+
+int if_add_warning(struct if_entry *entry, char *fmt, ...);
 
 #endif

@@ -19,10 +19,12 @@
 #include <sys/types.h>
 
 struct if_entry;
+struct label;
 
 struct netns_entry {
 	struct netns_entry *next;
 	struct if_entry *ifaces;
+	struct label *warnings;
 	long kernel_id;
 	/* name is NULL for root name space, for other name spaces it
 	 * contains human recognizable identifier */

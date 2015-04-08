@@ -13,9 +13,11 @@
  * GNU General Public License for more details.
  */
 
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <net/if.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -261,4 +263,19 @@ void if_append(struct if_entry **list, struct if_entry *item)
 	while (ptr->next)
 		ptr = ptr->next;
 	ptr->next = item;
+}
+
+int if_add_warning(struct if_entry *entry, char *fmt, ...)
+{
+	va_list ap;
+	char *warn;
+	int err;
+
+	va_start(ap, fmt);
+	entry->warnings++;
+	if (vasprintf(&warn, fmt, ap) < 0)
+		return ENOMEM;
+	err = label_add(&entry->ns->warnings, "%s: %s", ifstr(entry), warn);
+	free(warn);
+	return err;
 }

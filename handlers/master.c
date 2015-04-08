@@ -59,16 +59,10 @@ static int err_msg(int err, const char *type, struct if_entry *entry,
 {
 	if (err > 0)
 		return err;
-	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot find %s for %s reliably.\n",
-			type, ifstr(entry));
-		return EEXIST;
-	}
-	if (!check) {
-		fprintf(stderr, "ERROR: cannot find %s for %s.\n",
-			type, ifstr(entry));
-		return ENOENT;
-	}
+	if (err < 0)
+		return if_add_warning(entry, "has a %s but failed to find it reliably", type);
+	if (!check)
+		return if_add_warning(entry, "has a %s but failed to find it", type);
 	return 0;
 }
 

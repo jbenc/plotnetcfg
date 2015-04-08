@@ -60,6 +60,8 @@ static void output_ifaces_pass1(struct if_entry *list)
 			printf(",style=filled,fillcolor=\"pink\"");
 		else
 			printf(",style=filled,fillcolor=\"darkolivegreen1\"");
+		if (ptr->warnings)
+			printf(",color=\"red\"");
 		printf("]\n");
 	}
 }
@@ -92,14 +94,36 @@ static void output_ifaces_pass2(struct if_entry *list)
 	}
 }
 
+static void output_warnings(struct netns_entry *root)
+{
+	struct netns_entry *ns;
+	int was_label = 0;
+
+	for (ns = root; ns; ns = ns->next) {
+		if (ns->warnings) {
+			if (!was_label)
+				printf("label=\"");
+			was_label = 1;
+			output_label(ns->warnings);
+		}
+	}
+	if (was_label) {
+		printf("\"\n");
+		printf("fontcolor=\"red\"\n");
+	}
+}
+
 void dot_output(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 
 	printf("digraph {\nnode [shape=box]\n");
 	for (ns = root; ns; ns = ns->next) {
-		if (ns->name)
-			printf("subgraph \"cluster_%s\" {\nlabel=\"%s\"\n", ns->name, ns->name);
+		if (ns->name) {
+			printf("subgraph \"cluster_%s\" {\n", ns->name);
+			printf("label=\"%s\"\n", ns->name);
+			printf("fontcolor=\"black\"\n");
+		}
 		output_ifaces_pass1(ns->ifaces);
 		if (ns->name)
 			printf("}\n");
@@ -107,5 +131,6 @@ void dot_output(struct netns_entry *root)
 	for (ns = root; ns; ns = ns->next) {
 		output_ifaces_pass2(ns->ifaces);
 	}
+	output_warnings(root);
 	printf("}\n");
 }

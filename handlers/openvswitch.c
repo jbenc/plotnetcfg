@@ -406,7 +406,7 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	return weight;
 }
 
-static int link_iface(struct ovs_if *iface, struct netns_entry *root)
+static int link_iface(struct ovs_if *iface, struct netns_entry *root, int required)
 {
 	int err;
 
@@ -415,11 +415,14 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root)
 	err = find_interface(&iface->link, root, 1, NULL, link_iface_search, iface);
 	if (err > 0)
 		return err;
-	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot map openvswitch interface %s reliably.\n",
-			iface->name);
-		return EEXIST;
-	}
+	if (err < 0)
+		return label_add(&root->warnings,
+				 "Failed to map openvswitch interface %s reliably",
+				 iface->name);
+	if (required && !iface->link)
+		return label_add(&root->warnings,
+				 "Failed to map openvswitch interface %s",
+				 iface->name);
 	return 0;
 }
 
@@ -494,11 +497,8 @@ static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 	err = find_interface(&iface->link->peer, root, 1, NULL, link_patch_search, iface);
 	if (err > 0)
 		return err;
-	if (err < 0) {
-		fprintf(stderr, "ERROR: cannot find peer for openvswitch patch port %s reliably.\n",
-			iface->name);
-		return EEXIST;
-	}
+	if (err < 0)
+		return if_add_warning(iface->link, "failed to find openvswitch patch port peer reliably");
 	if (iface->link->peer)
 		iface->link->peer->peer = iface->link;
 	/* Ignore case when the peer is not found, it will be found from the
@@ -513,22 +513,16 @@ static int link_ifaces(struct netns_entry *root)
 	int err;
 
 	for (br = br_list; br; br = br->next) {
-		if (!br->system) {
-			fprintf(stderr, "ERROR: cannot find main interface for openvswitch bridge %s.\n",
-				br->name);
-			return ENOENT;
-		}
-		if ((err = link_iface(br->system, root)))
+		if (!br->system)
+			return label_add(&root->warnings,
+					 "Failed to find main interface for openvswitch bridge %s",
+					 br->name);
+		if ((err = link_iface(br->system, root, 1)))
 			return err;
-		if (!br->system->link) {
-			fprintf(stderr, "ERROR: cannot map openvswitch interface %s.\n",
-				br->system->name);
-			return ENOENT;
-		}
 		for (iface = br->ifaces; iface; iface = iface->next) {
 			if (iface == br->system)
 				continue;
-			if ((err = link_iface(iface, root)))
+			if ((err = link_iface(iface, root, 0)))
 				return err;
 			if (!iface->link) {
 				if ((err = create_iface(iface, root)))
