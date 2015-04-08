@@ -61,6 +61,8 @@ struct ovs_port {
 	unsigned int tag;
 	unsigned int trunks_count;
 	unsigned int *trunks;
+	/* bonding: */
+	char *bond_mode;
 };
 
 struct ovs_bridge {
@@ -141,7 +143,7 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 	return iface;
 }
 
-static int parse_vlan_info(struct ovs_port *port, JSON_Object *jport)
+static int parse_port_info(struct ovs_port *port, JSON_Object *jport)
 {
 	JSON_Value *jval;
 	JSON_Array *jarr;
@@ -161,6 +163,10 @@ static int parse_vlan_info(struct ovs_port *port, JSON_Object *jport)
 		for (i = 0; i < cnt; i++)
 			port->trunks[i] = json_array_get_number(jarr, i);
 	}
+
+	jval = json_object_get_value(jport, "bond_mode");
+	if (!is_empty(jval))
+		port->bond_mode = strdup(json_string(jval));
 	return 0;
 }
 
@@ -184,7 +190,7 @@ static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 		return NULL;
 	port->name = strdup(json_object_get_string(jport, "name"));
 	port->bridge = br;
-	if (parse_vlan_info(port, jport))
+	if (parse_port_info(port, jport))
 		return NULL;
 	jarr = json_object_get_array(jport, "interfaces");
 	if (is_set(jarr)) {
@@ -336,7 +342,7 @@ static char *construct_query(void)
 	json_array_append(params, new);
 	add_table(po, "Open_vSwitch", "bridges", "ovs_version", NULL);
 	add_table(po, "Bridge", "name", "ports", NULL);
-	add_table(po, "Port", "interfaces", "name", "tag", "trunks", NULL);
+	add_table(po, "Port", "interfaces", "name", "tag", "trunks", "bond_mode", NULL);
 	add_table(po, "Interface", "name", "type", "options", "admin_state", "link_state", NULL);
 
 	res = json_serialize(root);
@@ -486,6 +492,8 @@ static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
 			ptr += sprintf(ptr, ", %u", port->trunks[i]);
 		link->edge_label = buf;
 	}
+	if (port->bond_mode)
+		label_add(&link->label, "bond mode: %s", port->bond_mode);
 }
 
 static void link_vxlan(struct ovs_if *iface)
