@@ -274,9 +274,14 @@ int netns_list(struct netns_entry **result, int supported)
 			return err;
 	}
 	for (entry = *result; entry; entry = entry->next) {
-		if (entry->name)
+		if (entry->name) {
+			/* Do not try to switch to the root netns, as we're
+			 * already there when processing the first entry,
+			 * and netns_switch fails hard if there's no netns
+			 * support available. */
 			if ((err = netns_switch(entry)))
 				return err;
+		}
 		if ((err = if_list(&entry->ifaces, entry)))
 			return err;
 	}
@@ -299,6 +304,9 @@ int netns_switch(struct netns_entry *dest)
 	return do_netns_switch(dest->fd);
 }
 
+/* Used also to detect whether netns support is available.
+ * Returns 0 if everything went okay, -1 if there's no netns support,
+ * positive error code in case of an error. */
 int netns_switch_root(void)
 {
 	int fd, res;
