@@ -19,6 +19,7 @@
 #include <string.h>
 #include "../ethtool.h"
 #include "../handler.h"
+#include "../match.h"
 #include "../utils.h"
 #include "veth.h"
 

@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "../handler.h"
+#include "../match.h"
 #include "../utils.h"
 #include "master.h"
 

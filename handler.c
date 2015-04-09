@@ -148,39 +148,3 @@ void global_handler_cleanup(struct netns_entry *root)
 {
 	ghandler_loop(cleanup, root);
 }
-
-int find_interface(struct if_entry **found,
-		   struct netns_entry *root, int all_ns,
-		   struct if_entry *self,
-		   int (*callback)(struct if_entry *, void *),
-		   void *arg)
-{
-	struct netns_entry *ns;
-	struct if_entry *entry;
-	int prio = 0, count = 0, res;
-
-	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
-			if (entry == self)
-				continue;
-			res = callback(entry, arg);
-			if (res < 0)
-				return -res;
-			if (res > prio) {
-				*found = entry;
-				prio = res;
-				count = 1;
-			} else if (res == prio)
-				count++;
-		}
-		if (!all_ns)
-			break;
-	}
-	if (!prio) {
-		*found = NULL;
-		return 0;
-	}
-	if (count > 1)
-		return -1;
-	return 0;
-}

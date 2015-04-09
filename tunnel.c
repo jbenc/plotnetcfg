@@ -17,6 +17,7 @@
 #include <string.h>
 #include "handler.h"
 #include "if.h"
+#include "match.h"
 #include "netns.h"
 #include "utils.h"
 #include "tunnel.h"

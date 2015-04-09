@@ -28,6 +28,7 @@
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
+#include "../match.h"
 #include "../netns.h"
 #include "../tunnel.h"
 #include "../utils.h"
