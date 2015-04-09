@@ -171,17 +171,19 @@ static int netns_get_proc_entry(struct netns_entry **result,
 	return 0;
 }
 
-static int netns_new_list(struct netns_entry **root)
+static int netns_new_list(struct netns_entry **root, int supported)
 {
-	long kernel_id;
-
 	*root = calloc(sizeof(struct netns_entry), 1);
 	if (!*root)
 		return ENOMEM;
-	kernel_id = netns_get_kernel_id("/proc/1/ns/net");
-	if (kernel_id < 0)
-		kernel_id = 0;
-	(*root)->kernel_id = kernel_id;
+	if (supported) {
+		(*root)->kernel_id = netns_get_kernel_id("/proc/1/ns/net");
+		if ((*root)->kernel_id < 0)
+			return -(*root)->kernel_id;
+		(*root)->fd = open("/proc/1/ns/net", O_RDONLY);
+		if ((*root)->fd < 0)
+			return errno;
+	}
 	return 0;
 }
 
@@ -260,7 +262,7 @@ int netns_list(struct netns_entry **result, int supported)
 	struct netns_entry *entry;
 	int err;
 
-	err = netns_new_list(result);
+	err = netns_new_list(result, supported);
 	if (err)
 		return err;
 	if (supported) {
