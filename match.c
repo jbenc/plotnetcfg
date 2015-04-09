@@ -18,11 +18,11 @@
 #include "if.h"
 #include "match.h"
 
-int find_interface(struct if_entry **found,
-		   struct netns_entry *root, int all_ns,
-		   struct if_entry *self,
-		   int (*callback)(struct if_entry *, void *),
-		   void *arg)
+int match_if_heur(struct if_entry **found,
+		  struct netns_entry *root, int all_ns,
+		  struct if_entry *self,
+		  int (*callback)(struct if_entry *, void *),
+		  void *arg)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;

@@ -433,7 +433,7 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root, int requir
 
 	if (iface->link)
 		return 0;
-	err = find_interface(&iface->link, root, 1, NULL, link_iface_search, iface);
+	err = match_if_heur(&iface->link, root, 1, NULL, link_iface_search, iface);
 	if (err > 0)
 		return err;
 	if (err < 0)
@@ -519,7 +519,7 @@ static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 {
 	int err;
 
-	err = find_interface(&iface->link->peer, root, 1, NULL, link_patch_search, iface);
+	err = match_if_heur(&iface->link->peer, root, 1, NULL, link_patch_search, iface);
 	if (err > 0)
 		return err;
 	if (err < 0)

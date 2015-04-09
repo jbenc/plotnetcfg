@@ -51,7 +51,7 @@ struct if_entry *tunnel_find_iface(struct netns_entry *ns, const char *addr)
 	data.af = raw_addr(data.raw, addr);
 	if (data.af < 0)
 		return NULL;
-	if (find_interface(&result, ns, 0, NULL, match_tunnel, &data))
+	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, &data))
 		return NULL;
 	return result;
 }

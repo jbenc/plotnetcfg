@@ -18,17 +18,18 @@
 #include "if.h"
 #include "netns.h"
 
-/* callback returns 0 to ignore the interface, < 0 for error, > 0 for
+/* Find interface using a heuristic.
+ * Callback returns 0 to ignore the interface, < 0 for error, > 0 for
  * priority.
  * The highest priority match is returned if exactly one highest priority
  * interface matches. Returns -1 if more highest priority interfaces match.
  * Returns 0 for success (*found will be NULL for no match) or error
  * code > 0.
  */
-int find_interface(struct if_entry **found,
-		   struct netns_entry *root, int all_ns,
-		   struct if_entry *self,
-		   int (*callback)(struct if_entry *, void *),
-		   void *arg);
+int match_if_heur(struct if_entry **found,
+		  struct netns_entry *root, int all_ns,
+		  struct if_entry *self,
+		  int (*callback)(struct if_entry *, void *),
+		  void *arg);
 
 #endif
