@@ -395,8 +395,12 @@ int netns_switch_root(void)
 	int fd, res;
 
 	fd = open("/proc/1/ns/net", O_RDONLY);
-	if (fd < 0)
-		return errno;
+	if (fd < 0) {
+		res = errno;
+		if (res == ENOENT)
+			res = -1;
+		return res;
+	}
 	res = do_netns_switch(fd);
 	close(fd);
 	if (res == ENOENT)
