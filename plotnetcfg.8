@@ -1,0 +1,88 @@
+.TH plotnetcfg 8 "9 April 2015"
+.SH NAME
+plotnetcfg \- plot diagram of network configuration
+.SH SYNOPSIS
+.B plotnetcfg
+.RB [ options ]
+.SH DESCRIPTION
+.B plotnetcfg
+is a tool that scans networking configuration on the machine and outputs
+a diagram of the configuration hierarchy in
+.B dot
+language.
+
+The output can be converted by the
+.BR dot (1)
+tool from
+.BR graphviz (7)
+package to various formats such as PDF, PostScript or SVG.
+
+.B plotnetcfg
+is able to scan different network name spaces and figure out relations that
+span name spaces. It supports all kinds of network interfaces and
+understands specifics of VLANs, bridges, veth pairs and Open vSwitch.
+
+The tool has to be run under root or with both CAP_SYS_ADMIN and
+CAP_NET_ADMIN capabilities. See
+.BR capabilities (7)
+for details.
+
+.B plotnetcfg
+is lightweight with as few library dependencies as possible. Currently, the
+only dependency is
+.BR libc .
+This allows the
+.B plotnetcfg
+binary to be copied to a target machine and run there (provided it has the
+same or newer version of
+.B glibc
+as
+.B plotnetcfg
+was compiled against).
+
+See EXAMPLES for typical
+.B plotnetcfg
+usage.
+
+.SH OPTIONS
+.TP
+\fB-D\fr, \fB--ovs-db\fR=\fIPATH\fR
+Path to the socket used to communicate with Open vSwitch database server.
+Only UNIX sockets are supported. The default is
+.BR /var/run/openvswitch/db.sock .
+.TP
+\fB-h\fR, \fB--help\fR
+Print short help and exit.
+.TP
+\fB--version\fR
+Print program version and exit.
+
+.SH EXAMPLES
+Display network configuration of the local machine:
+.RS
+.B plotnetcfg | dot -Tpdf | okular -
+.RE
+
+Save network configuration to a file for later analysis:
+.RS
+.B plotnetcfg >
+.I file
+.RE
+
+Create PDF with network configuration of a remote machine:
+.RS
+.B scp /usr/sbin/plotnetcfg
+.BI root@ target :
+.br
+.B ssh
+.BI root@ target
+.B ./plotnetcfg | dot -Tpdf >
+.I file.pdf
+
+.SH SEE ALSO
+.BR dot (1),
+.BR graphviz (7)
+
+.SH AUTHOR
+.B plotnetcfg
+was written and is maintained by Jiri Benc <jbenc@redhat.com>.
