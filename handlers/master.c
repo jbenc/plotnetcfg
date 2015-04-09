@@ -76,7 +76,7 @@ static int process(struct if_entry *entry, struct netns_entry *root)
 		if ((err = err_msg(err, "master", entry, entry->master)))
 			return err;
 	}
-	if (entry->link_index) {
+	if (!entry->link && entry->link_index) {
 		err = match_if_heur(&entry->link, root, 1, entry, match_link, entry);
 		if ((err = err_msg(err, "link", entry, entry->link)))
 			return err;

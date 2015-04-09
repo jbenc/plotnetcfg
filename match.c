@@ -53,3 +53,40 @@ int match_if_heur(struct if_entry **found,
 		return -1;
 	return 0;
 }
+
+struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
+				  struct netns_entry *current)
+{
+	struct netns_id *ptr;
+	struct if_entry *entry;
+
+	for (ptr = current->ids; ptr; ptr = ptr->next) {
+		if (ptr->id == netnsid) {
+			for (entry = ptr->ns->ifaces; entry; entry = entry->next) {
+				if (entry->if_index == ifindex)
+					return entry;
+			}
+			break;
+		}
+	}
+	return NULL;
+}
+
+void match_all_netnsid(struct netns_entry *root)
+{
+	struct netns_entry *ns;
+	struct if_entry *entry;
+
+	for (ns = root; ns; ns = ns->next) {
+		for (entry = ns->ifaces; entry; entry = entry->next) {
+			if (entry->link_netnsid >= 0)
+				entry->link = match_if_netnsid(entry->link_index,
+							       entry->link_netnsid,
+							       ns);
+			if (entry->peer_netnsid >= 0)
+				entry->peer = match_if_netnsid(entry->peer_index,
+							       entry->peer_netnsid,
+							       ns);
+		}
+	}
+}

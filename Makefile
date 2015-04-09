@@ -12,11 +12,11 @@ args.o: args.c args.h
 dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h version.h
 ethtool.o: ethtool.c ethtool.h
 handler.o: handler.c handler.h if.h netns.h
-if.o: if.c if.h ethtool.h handler.h label.h utils.h
+if.o: if.c if.h compat.h ethtool.h handler.h label.h utils.h
 label.o: label.h label.c utils.h
 main.o: main.c args.h dot.h handler.h netns.h utils.h version.h
 match.o: match.c match.h if.h netns.h
-netns.o: netns.c netns.h handler.h if.h utils.h
+netns.o: netns.c netns.h compat.h handler.h if.h match.h utils.h
 tunnel.o: tunnel.c tunnel.h handler.h if.h match.h netns.h utils.h tunnel.h
 utils.o: utils.c utils.h if.h netns.h
 

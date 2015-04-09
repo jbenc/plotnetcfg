@@ -24,10 +24,14 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <libnetlink.h>
 #include "handler.h"
 #include "if.h"
+#include "match.h"
 #include "utils.h"
 #include "netns.h"
+
+#include "compat.h"
 
 #define NETNS_RUN_DIR "/var/run/netns"
 
@@ -257,6 +261,68 @@ static int netns_add_proc_list(struct netns_entry *root)
 	return 0;
 }
 
+/* Returns -1 if netnsids are not supported. */
+static int netns_get_id(struct rtnl_handle *rth, struct netns_entry *entry)
+{
+	struct {
+		struct nlmsghdr nlh;
+		struct rtgenmsg rtm;
+		char buf[1024];
+	} msg;
+	struct rtattr *tb[NETNSA_MAX + 1];
+	int len;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
+	msg.nlh.nlmsg_flags = NLM_F_REQUEST;
+	msg.nlh.nlmsg_type = RTM_GETNSID;
+	msg.rtm.rtgen_family = AF_UNSPEC;
+	addattr32(&msg.nlh, 1024, NETNSA_FD, entry->fd);
+	if (rtnl_talk(rth, &msg.nlh, 0, 0, &msg.nlh) < 0)
+		return -1;
+	if (msg.nlh.nlmsg_type == NLMSG_ERROR)
+		return -1;
+	len = msg.nlh.nlmsg_len - NLMSG_SPACE(sizeof(struct rtgenmsg));
+	if (len < 0)
+		return -1;
+	parse_rtattr(tb, NETNSA_MAX, NETNS_RTA(&msg.rtm), len);
+	if (tb[NETNSA_NSID])
+		return *(__s32 *)RTA_DATA(tb[NETNSA_NSID]);
+	return -1;
+}
+
+/* This is best effort only, if anything fails (e.g. netnsids are not
+ * supported by kernel), we fail back to heuristics. */
+static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *root)
+{
+	struct rtnl_handle rth;
+	struct netns_entry *entry;
+	struct netns_id *nsid, *ptr = NULL;
+	int id;
+
+	if (netns_switch(current))
+		return;
+	if (rtnl_open(&rth, 0) < 0)
+		return;
+	for (entry = root; entry; entry = entry->next) {
+		id = netns_get_id(&rth, entry);
+		if (id < 0)
+			continue;
+		nsid = malloc(sizeof(*nsid));
+		if (!nsid)
+			break;
+		nsid->next = NULL;
+		nsid->ns = entry;
+		nsid->id = id;
+		if (!ptr)
+			current->ids = nsid;
+		else
+			ptr->next = nsid;
+		ptr = nsid;
+	}
+	rtnl_close(&rth);
+}
+
 int netns_list(struct netns_entry **result, int supported)
 {
 	struct netns_entry *entry;
@@ -285,6 +351,16 @@ int netns_list(struct netns_entry **result, int supported)
 		if ((err = if_list(&entry->ifaces, entry)))
 			return err;
 	}
+	/* Walk all net name spaces again and gather all kernel assigned
+	 * netnsids. We don't assign netnsids ourselves to prevent assigning
+	 * them needlessly - the kernel assigns only those that are really
+	 * needed while doing netlinks dumps. Note also that netnsids are
+	 * per name space and this is O(n^2). */
+	for (entry = *result; entry; entry = entry->next)
+		netns_get_all_ids(entry, *result);
+	/* And finally, resolve netnsid+ifindex to the if_entry pointers. */
+	match_all_netnsid(*result);
+
 	if ((err = global_handler_post(*result)))
 		return err;
 	if ((err = handler_post(*result)))
@@ -323,6 +399,7 @@ int netns_switch_root(void)
 
 static void netns_list_destruct(struct netns_entry *entry)
 {
+	list_free(entry->ids, NULL);
 	if_list_free(entry->ifaces);
 	free(entry->name);
 }

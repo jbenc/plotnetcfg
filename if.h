@@ -44,8 +44,10 @@ struct if_entry {
 	unsigned int master_index;
 	struct if_entry *master;
 	unsigned int link_index;
+	int link_netnsid;
 	struct if_entry *link;
 	unsigned int peer_index;
+	int peer_netnsid;
 	struct if_entry *peer;
 	struct if_addr_entry *addr;
 	char *edge_label;

@@ -30,6 +30,8 @@
 #include "utils.h"
 #include "if.h"
 
+#include "compat.h"
+
 struct nlmsg_list
 {
 	struct nlmsg_list *next;
@@ -92,8 +94,11 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	}
 	if (tb[IFLA_MASTER])
 		dest->master_index = *(int *)RTA_DATA(tb[IFLA_MASTER]);
-	if (tb[IFLA_LINK])
+	if (tb[IFLA_LINK]) {
 		dest->link_index = *(int*)RTA_DATA(tb[IFLA_LINK]);
+		if (tb[IFLA_LINK_NETNSID])
+			dest->link_netnsid = *(int*)RTA_DATA(tb[IFLA_LINK_NETNSID]);
+	}
 
 	dest->driver = ethtool_driver(dest->if_name);
 
@@ -176,6 +181,18 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 	return 0;
 }
 
+static struct if_entry *if_alloc(void)
+{
+	struct if_entry *entry;
+
+	entry = calloc(sizeof(struct if_entry), 1);
+	if (!entry)
+		return NULL;
+	entry->link_netnsid = -1;
+	entry->peer_netnsid = -1;
+	return entry;
+}
+
 int if_list(struct if_entry **result, struct netns_entry *ns)
 {
 	struct rtnl_handle rth = { .fd = -1 };
@@ -207,7 +224,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 		return errno ? errno : -1;
 
 	for (l = linfo.head; l; l = l->next) {
-		entry = calloc(sizeof(struct if_entry), 1);
+		entry = if_alloc();
 		if (!entry)
 			return ENOMEM;
 		entry->ns = ns;
