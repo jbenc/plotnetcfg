@@ -39,7 +39,16 @@ void handler_veth_register(void)
 
 static int veth_scan(struct if_entry *entry)
 {
-	entry->peer_index = ethtool_veth_peer(entry->if_name);
+	if (entry->link_index) {
+		entry->peer_index = entry->link_index;
+		entry->peer_netnsid = entry->link_netnsid;
+		entry->peer = entry->link;
+		entry->link_index = 0;
+		entry->link_netnsid = -1;
+		entry->link = NULL;
+	} else {
+		entry->peer_index = ethtool_veth_peer(entry->if_name);
+	}
 	return 0;
 }
 
@@ -62,6 +71,8 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
 
+	if (entry->peer)
+		return 0;
 	if (!entry->peer_index)
 		return ENOENT;
 	err = match_if_heur(&entry->peer, root, 1, entry, match_peer, entry);
