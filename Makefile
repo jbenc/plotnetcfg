@@ -33,3 +33,9 @@ version.h:
 
 clean:
 	rm -f version.h *.o handlers/*.o plotnetcfg
+
+install: plotnetcfg
+	install -d $(DESTDIR)/usr/sbin/
+	install plotnetcfg $(DESTDIR)/usr/sbin/
+	install -d $(DESTDIR)/usr/share/man/man8/
+	install -m 644 plotnetcfg.8 $(DESTDIR)/usr/share/man/man8/
