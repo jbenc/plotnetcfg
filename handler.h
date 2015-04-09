@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <libnetlink.h>
+#include <linux/rtnetlink.h>
 #include "if.h"
 #include "netns.h"
 

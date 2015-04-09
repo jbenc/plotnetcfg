@@ -23,53 +23,14 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <libnetlink.h>
 #include "ethtool.h"
 #include "handler.h"
 #include "label.h"
+#include "netlink.h"
 #include "utils.h"
 #include "if.h"
 
 #include "compat.h"
-
-struct nlmsg_list
-{
-	struct nlmsg_list *next;
-	struct nlmsghdr	  h;
-};
-
-struct nlmsg_chain
-{
-	struct nlmsg_list *head;
-	struct nlmsg_list *tail;
-};
-
-static int store_nlmsg(_unused const struct sockaddr_nl *who,
-		       struct nlmsghdr *n, void *arg)
-{
-	struct nlmsg_chain *lchain = (struct nlmsg_chain *)arg;
-	struct nlmsg_list *h;
-
-	h = malloc(n->nlmsg_len + sizeof(void *));
-	if (h == NULL)
-		return -1;
-
-	memcpy(&h->h, n, n->nlmsg_len);
-	h->next = NULL;
-
-	if (lchain->tail)
-		lchain->tail->next = h;
-	else
-		lchain->head = h;
-	lchain->tail = h;
-
-	return 0;
-}
-
-static void free_nlmsg_chain(struct nlmsg_chain *info)
-{
-	list_free(info->head, NULL);
-}
 
 static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 {
@@ -82,11 +43,11 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 	if (len < 0)
 		return;
-	parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
+	rtnl_parse(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 	if (tb[IFLA_IFNAME] == NULL)
 		return;
 	dest->if_index = ifi->ifi_index;
-	dest->if_name = strdup(rta_getattr_str(tb[IFLA_IFNAME]));
+	dest->if_name = strdup(RTA_DATA(tb[IFLA_IFNAME]));
 	if (ifi->ifi_flags & IFF_UP) {
 		dest->flags |= IF_UP;
 		if (ifi->ifi_flags & IFF_RUNNING)
@@ -128,7 +89,7 @@ static int store_addr(struct addr *dest, const struct ifaddrmsg *ifa,
 	return 0;
 }
 
-static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
+static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 {
 	struct if_addr_entry *entry, *ptr = NULL;
 	struct nlmsghdr *n;
@@ -150,7 +111,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_list *ainfo)
 		    ifa->ifa_family != AF_INET6)
 			/* only IP addresses supported (at least for now) */
 			continue;
-		parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa), len);
+		rtnl_parse(rta_tb, IFA_MAX, IFA_RTA(ifa), len);
 		if (!rta_tb[IFA_LOCAL] && !rta_tb[IFA_ADDRESS])
 			/* don't care about broadcast and anycast adresses */
 			continue;
@@ -195,41 +156,29 @@ static struct if_entry *if_alloc(void)
 
 int if_list(struct if_entry **result, struct netns_entry *ns)
 {
-	struct rtnl_handle rth = { .fd = -1 };
-	struct rtnl_dump_filter_arg farg[2];
-	struct nlmsg_chain linfo = { NULL, NULL };
-	struct nlmsg_chain ainfo = { NULL, NULL };
-	struct nlmsg_list *l;
+	struct rtnl_handle hnd;
+	struct nlmsg_entry *linfo, *ainfo, *l;
 	struct if_entry *entry, *ptr = NULL;
 	int err;
 
 	*result = NULL;
 
-	if (rtnl_open(&rth, 0) < 0)
-		return errno ? errno : -1;
-	if (rtnl_wilddump_request(&rth, AF_UNSPEC, RTM_GETLINK) < 0)
-		return errno ? errno : -1;
-	memset(farg, 0, sizeof(farg));
-	farg[0].filter = store_nlmsg;
-	farg[0].arg1 = &linfo;
-	if (rtnl_dump_filter_l(&rth, farg) < 0)
-		return errno ? errno : -1;
+	if ((err = rtnl_open(&hnd)))
+		return err;
+	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETLINK, &linfo);
+	if (err)
+		return err;
+	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETADDR, &ainfo);
+	if (err)
+		return err;
 
-	if (rtnl_wilddump_request(&rth, AF_UNSPEC, RTM_GETADDR) < 0)
-		return errno ? errno : -1;
-	memset(farg, 0, sizeof(farg));
-	farg[0].filter = store_nlmsg;
-	farg[0].arg1 = &ainfo;
-	if (rtnl_dump_filter_l(&rth, farg) < 0)
-		return errno ? errno : -1;
-
-	for (l = linfo.head; l; l = l->next) {
+	for (l = linfo; l; l = l->next) {
 		entry = if_alloc();
 		if (!entry)
 			return ENOMEM;
 		entry->ns = ns;
 		fill_if_link(entry, &l->h);
-		if ((err = fill_if_addr(entry, ainfo.head)))
+		if ((err = fill_if_addr(entry, ainfo)))
 			return err;
 		if ((err = handler_scan(entry)))
 			return err;
@@ -240,8 +189,9 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 		ptr = entry;
 	}
 
-	free_nlmsg_chain(&linfo);
-	rtnl_close(&rth);
+	nlmsg_free(linfo);
+	nlmsg_free(ainfo);
+	rtnl_close(&hnd);
 	return 0;
 }
 

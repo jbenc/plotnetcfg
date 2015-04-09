@@ -19,15 +19,16 @@
 #include <fcntl.h>
 #include <sched.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <libnetlink.h>
 #include "handler.h"
 #include "if.h"
 #include "match.h"
+#include "netlink.h"
 #include "utils.h"
 #include "netns.h"
 
@@ -262,50 +263,56 @@ static int netns_add_proc_list(struct netns_entry *root)
 }
 
 /* Returns -1 if netnsids are not supported. */
-static int netns_get_id(struct rtnl_handle *rth, struct netns_entry *entry)
+static int netns_get_id(struct rtnl_handle *hnd, struct netns_entry *entry)
 {
 	struct {
-		struct nlmsghdr nlh;
-		struct rtgenmsg rtm;
-		char buf[1024];
-	} msg;
+		struct nlmsghdr n;
+		struct rtgenmsg r;
+		struct rtattr a __attribute__ ((aligned(NLMSG_ALIGNTO)));
+		uint32_t fd;
+	} src;
+	struct nlmsg_entry *dst;
 	struct rtattr *tb[NETNSA_MAX + 1];
-	int len;
+	int len, res;
 
-	memset(&msg, 0, sizeof(msg));
-	msg.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
-	msg.nlh.nlmsg_flags = NLM_F_REQUEST;
-	msg.nlh.nlmsg_type = RTM_GETNSID;
-	msg.rtm.rtgen_family = AF_UNSPEC;
-	addattr32(&msg.nlh, 1024, NETNSA_FD, entry->fd);
-	if (rtnl_talk(rth, &msg.nlh, 0, 0, &msg.nlh) < 0)
+	memset(&src, 0, sizeof(src));
+	src.n.nlmsg_len = sizeof(src);
+	src.n.nlmsg_flags = NLM_F_REQUEST;
+	src.n.nlmsg_type = RTM_GETNSID;
+	src.r.rtgen_family = AF_UNSPEC;
+	src.a.rta_type = NETNSA_FD;
+	src.a.rta_len = RTA_LENGTH(sizeof(uint32_t));
+	src.fd = entry->fd;
+	res = rtnl_exchange(hnd, &src.n, &dst);
+	if (res || !dst)
 		return -1;
-	if (msg.nlh.nlmsg_type == NLMSG_ERROR)
-		return -1;
-	len = msg.nlh.nlmsg_len - NLMSG_SPACE(sizeof(struct rtgenmsg));
+	res = -1;
+	len = dst->h.nlmsg_len - NLMSG_SPACE(sizeof(struct rtgenmsg));
 	if (len < 0)
-		return -1;
-	parse_rtattr(tb, NETNSA_MAX, NETNS_RTA(&msg.rtm), len);
+		goto out;
+	rtnl_parse(tb, NETNSA_MAX, NETNS_RTA(NLMSG_DATA(&dst->h)), len);
 	if (tb[NETNSA_NSID])
-		return *(__s32 *)RTA_DATA(tb[NETNSA_NSID]);
-	return -1;
+		res = *(int32_t *)RTA_DATA(tb[NETNSA_NSID]);
+out:
+	nlmsg_free(dst);
+	return res;
 }
 
 /* This is best effort only, if anything fails (e.g. netnsids are not
  * supported by kernel), we fail back to heuristics. */
 static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *root)
 {
-	struct rtnl_handle rth;
+	struct rtnl_handle hnd;
 	struct netns_entry *entry;
 	struct netns_id *nsid, *ptr = NULL;
 	int id;
 
 	if (netns_switch(current))
 		return;
-	if (rtnl_open(&rth, 0) < 0)
+	if (rtnl_open(&hnd) < 0)
 		return;
 	for (entry = root; entry; entry = entry->next) {
-		id = netns_get_id(&rth, entry);
+		id = netns_get_id(&hnd, entry);
 		if (id < 0)
 			continue;
 		nsid = malloc(sizeof(*nsid));
@@ -320,7 +327,7 @@ static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *r
 			ptr->next = nsid;
 		ptr = nsid;
 	}
-	rtnl_close(&rth);
+	rtnl_close(&hnd);
 }
 
 int netns_list(struct netns_entry **result, int supported)

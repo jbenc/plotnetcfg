@@ -14,14 +14,15 @@
  */
 
 #define _GNU_SOURCE
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <libnetlink.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "../handler.h"
+#include "../netlink.h"
 #include "vlan.h"
 
 static int vlan_netlink(struct if_entry *entry, struct rtattr **tb);
@@ -54,14 +55,14 @@ static int vlan_netlink(struct if_entry *entry, struct rtattr **tb)
 
 	if (!tb[IFLA_LINKINFO])
 		return ENOENT;
-	parse_rtattr_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
+	rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 	if (!linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
-	parse_rtattr_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
+	rtnl_parse_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
 	if (!vlanattr[IFLA_VLAN_ID] ||
 	    RTA_PAYLOAD(vlanattr[IFLA_VLAN_ID]) < sizeof(__u16))
 		return ENOENT;
-	priv->tag = rta_getattr_u16(vlanattr[IFLA_VLAN_ID]);
+	priv->tag = *(uint16_t *)RTA_DATA(vlanattr[IFLA_VLAN_ID]);
 	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0)
 		return ENOMEM;
 	return 0;
