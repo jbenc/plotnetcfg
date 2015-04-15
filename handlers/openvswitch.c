@@ -502,6 +502,7 @@ static void link_vxlan(struct ovs_if *iface)
 	if (!iface->local_ip || !*iface->local_ip)
 		return;
 	iface->link->peer = tunnel_find_iface(iface->link->ns, iface->local_ip);
+	iface->link->flags |= IF_PEER_WEAK;
 }
 
 static int link_patch_search(struct if_entry *entry, void *arg)

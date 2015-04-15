@@ -91,7 +91,8 @@ static void output_ifaces_pass2(struct if_entry *list)
 		    (((unsigned long)ptr > (unsigned long)ptr->peer) ||
 		     !ptr->peer->peer)) {
 			printf("%s -> ", ifid(ptr));
-			printf("%s [dir=none]\n", ifid(ptr->peer));
+			printf("%s [dir=none%s]\n", ifid(ptr->peer),
+			       ptr->flags & IF_PEER_WEAK ? ",style=dotted" : "");
 		}
 	}
 }

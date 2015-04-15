@@ -58,6 +58,7 @@ struct if_entry {
 #define IF_UP		1
 #define IF_HAS_LINK	2
 #define IF_INTERNAL	4
+#define IF_PEER_WEAK	8
 
 int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);
