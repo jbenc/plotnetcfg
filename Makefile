@@ -32,7 +32,7 @@ version.h:
 	echo "#define VERSION \"`git describe 2> /dev/null || cat version`\"" > version.h
 
 clean:
-	rm -f version.h *.o handlers/*.o plotnetcfg
+	rm -f version.h *.o handlers/*.o parson/*.o plotnetcfg
 
 install: plotnetcfg
 	install -d $(DESTDIR)/usr/sbin/
