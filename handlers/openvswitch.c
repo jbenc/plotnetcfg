@@ -175,7 +175,8 @@ static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 				   struct ovs_bridge *br)
 {
 	struct ovs_port *port;
-	struct ovs_if *ptr, *iface;
+	struct ovs_if *ptr = NULL; /* GCC false positive */
+	struct ovs_if *iface;
 	JSON_Object *jport;
 	JSON_Array *jarr;
 	unsigned int i;
@@ -226,7 +227,8 @@ static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 static struct ovs_bridge *parse_bridge(JSON_Object *jresult, JSON_Array *uuid)
 {
 	struct ovs_bridge *br;
-	struct ovs_port *ptr, *port;
+	struct ovs_port *ptr = NULL; /* GCC false positive */
+	struct ovs_port *port;
 	JSON_Object *jbridge;
 	JSON_Array *jarr;
 	unsigned int i;
@@ -479,9 +481,10 @@ static void label_iface(struct ovs_if *iface)
 
 static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
 {
-	if (port->tag)
-		 asprintf(&link->edge_label, "tag %u", port->tag);
-	else if (port->trunks_count) {
+	if (port->tag) {
+		 if (asprintf(&link->edge_label, "tag %u", port->tag) < 0)
+			link->edge_label = NULL;
+	} else if (port->trunks_count) {
 		char *buf, *ptr;
 		unsigned int i;
 

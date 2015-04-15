@@ -67,7 +67,7 @@ static int driver_match(struct handler *h, struct if_entry *e)
 
 int handler_netlink(struct if_entry *entry, struct rtattr **tb)
 {
-	int err;
+	int err = 0;
 
 	handler_err_loop(err, netlink, entry, tb);
 	return err;
@@ -75,7 +75,7 @@ int handler_netlink(struct if_entry *entry, struct rtattr **tb)
 
 int handler_scan(struct if_entry *entry)
 {
-	int err;
+	int err = 0;
 
 	handler_err_loop(err, scan, entry);
 	return err;

@@ -88,7 +88,8 @@ int rtnl_exchange(struct rtnl_handle *hnd,
 	int is_dump;
 	int len, err;
 	struct nlmsghdr *n;
-	struct nlmsg_entry *ptr, *entry;
+	struct nlmsg_entry *ptr = NULL; /* GCC false positive */
+	struct nlmsg_entry *entry;
 
 	*dest = NULL;
 
