@@ -1,3 +1,4 @@
 *.o
 plotnetcfg
 version.h
+tags
