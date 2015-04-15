@@ -82,7 +82,7 @@ struct json_array_t {
 /* Various */
 static char * read_file(const char *filename);
 static void   remove_comments(char *string, const char *start_token, const char *end_token);
-static int    try_realloc(void **ptr, size_t new_size);
+static void * try_realloc(void *ptr, size_t new_size, int *err);
 static char * parson_strndup(const char *string, size_t n);
 static char * parson_strdup(const char *string);
 static int    is_utf(const unsigned char *string);
@@ -124,13 +124,14 @@ static char * json_serialize_to_buffer_r(const JSON_Value *value, char *buf);
 static char * json_serialize_string(const char *string, char *buf);
 
 /* Various */
-static int try_realloc(void **ptr, size_t new_size) {
-    void *reallocated_ptr = PARSON_REALLOC(*ptr, new_size);
+static void *try_realloc(void *ptr, size_t new_size, int *err) {
+    void *reallocated_ptr = PARSON_REALLOC(ptr, new_size);
     if (reallocated_ptr == NULL) {
-        return PARSON_ERROR;
+        *err = PARSON_ERROR;
+        return ptr;
     }
-    *ptr = reallocated_ptr;
-    return PARSON_SUCCESS;
+    *err = PARSON_SUCCESS;
+    return reallocated_ptr;
 }
 
 static char * parson_strndup(const char *string, size_t n) {
@@ -263,9 +264,12 @@ static int json_object_add(JSON_Object *object, const char *name, JSON_Value *va
 }
 
 static int json_object_resize(JSON_Object *object, size_t capacity) {
-    if (try_realloc((void**)&object->names, capacity * sizeof(char*)) == PARSON_ERROR)
+    int err;
+    object->names = try_realloc(object->names, capacity * sizeof(char*), &err);
+    if (err == PARSON_ERROR)
         return PARSON_ERROR;
-    if (try_realloc((void**)&object->values, capacity * sizeof(JSON_Value*)) == PARSON_ERROR)
+    object->values = try_realloc(object->values, capacity * sizeof(JSON_Value*), &err);
+    if (err == PARSON_ERROR)
         return PARSON_ERROR;
     object->capacity = capacity;
     return PARSON_SUCCESS;
@@ -318,7 +322,9 @@ static int json_array_add(JSON_Array *array, JSON_Value *value) {
 }
 
 static int json_array_resize(JSON_Array *array, size_t capacity) {
-    if (try_realloc((void**)&array->items, capacity * sizeof(JSON_Value*)) == PARSON_ERROR)
+    int err;
+    array->items = try_realloc(array->items, capacity * sizeof(JSON_Value*), &err);
+    if (err == PARSON_ERROR)
         return PARSON_ERROR;
     array->capacity = capacity;
     return PARSON_SUCCESS;
@@ -403,6 +409,7 @@ static char* process_string(const char *input, size_t len) {
     const char *input_ptr = input;
     char *output = (char*)PARSON_MALLOC((len + 1) * sizeof(char));
     char *output_ptr = output;
+    int err;
     while ((*input_ptr != '\0') && (size_t)(input_ptr - input) < len) {
         if (*input_ptr == '\\') {
             input_ptr++;
@@ -431,7 +438,8 @@ static char* process_string(const char *input, size_t len) {
         input_ptr++;
     }
     *output_ptr = '\0';
-    if (try_realloc((void**)&output, strlen(output) + 1) == PARSON_ERROR)
+    output = try_realloc(output, strlen(output) + 1, &err);
+    if (err == PARSON_ERROR)
         goto error;
     return output;
 error:
