@@ -26,24 +26,28 @@ int label_add(struct label **list, char *fmt, ...)
 {
 	va_list ap;
 	struct label *new, *ptr = *list;
+	int err = ENOMEM;
 
 	va_start(ap, fmt);
 	new = calloc(sizeof(*new), 1);
 	if (!new)
-		return ENOMEM;
+		goto out;
 	if (vasprintf(&new->text, fmt, ap) < 0) {
 		free(new);
-		return ENOMEM;
+		goto out;
 	}
 
+	err = 0;
 	if (!ptr) {
 		*list = new;
-		return 0;
+		goto out;
 	}
 	while (ptr->next)
 		ptr = ptr->next;
 	ptr->next = new;
-	return 0;
+out:
+	va_end(ap);
+	return err;
 }
 
 static void label_destruct(struct label *item)

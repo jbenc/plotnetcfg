@@ -236,13 +236,15 @@ int if_add_warning(struct if_entry *entry, char *fmt, ...)
 {
 	va_list ap;
 	char *warn;
-	int err;
+	int err = ENOMEM;
 
 	va_start(ap, fmt);
 	entry->warnings++;
 	if (vasprintf(&warn, fmt, ap) < 0)
-		return ENOMEM;
+		goto out;
 	err = label_add(&entry->ns->warnings, "%s: %s", ifstr(entry), warn);
 	free(warn);
+out:
+	va_end(ap);
 	return err;
 }
