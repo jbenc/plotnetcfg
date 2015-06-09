@@ -60,8 +60,14 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		if (tb[IFLA_LINK_NETNSID])
 			dest->link_netnsid = *(int*)RTA_DATA(tb[IFLA_LINK_NETNSID]);
 	}
+	if (tb[IFLA_MTU])
+		dest->mtu = *(int *)RTA_DATA(tb[IFLA_MTU]);
 
-	dest->driver = ethtool_driver(dest->if_name);
+	if (ifi->ifi_flags & IFF_LOOPBACK) {
+		dest->driver = strdup("loopback");
+		dest->flags |= IF_LOOPBACK;
+	} else
+		dest->driver = ethtool_driver(dest->if_name);
 
 	handler_netlink(dest, tb);
 }

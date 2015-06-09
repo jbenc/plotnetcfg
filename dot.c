@@ -43,6 +43,12 @@ static void output_addresses(struct if_addr_entry *list)
 	}
 }
 
+static void output_mtu(struct if_entry *ptr)
+{
+	if (ptr->mtu && ptr->mtu != 1500 && !(ptr->flags & IF_LOOPBACK))
+		printf("\\nMTU %d", ptr->mtu);
+}
+
 static void output_ifaces_pass1(struct if_entry *list)
 {
 	struct if_entry *ptr;
@@ -52,6 +58,7 @@ static void output_ifaces_pass1(struct if_entry *list)
 		if (ptr->driver)
 			printf(" (%s)", ptr->driver);
 		output_label(ptr->label);
+		output_mtu(ptr);
 		output_addresses(ptr->addr);
 		printf("\"");
 		if (ptr->flags & IF_INTERNAL)

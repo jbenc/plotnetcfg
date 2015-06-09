@@ -38,6 +38,7 @@ struct if_entry {
 	char *internal_ns;
 	unsigned int if_index;
 	unsigned int flags;
+	int mtu;
 	char *if_name;
 	char *driver;
 	struct label *label;
@@ -55,10 +56,11 @@ struct if_entry {
 	int warnings;
 };
 
-#define IF_UP		1
-#define IF_HAS_LINK	2
-#define IF_INTERNAL	4
-#define IF_PEER_WEAK	8
+#define IF_LOOPBACK	1
+#define IF_UP		2
+#define IF_HAS_LINK	4
+#define IF_INTERNAL	8
+#define IF_PEER_WEAK	16
 
 int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);
