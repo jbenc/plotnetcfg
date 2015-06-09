@@ -15,6 +15,7 @@
 
 #define _GNU_SOURCE
 #include <errno.h>
+#include <jansson.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,6 @@
 #include "../netns.h"
 #include "../tunnel.h"
 #include "../utils.h"
-#include "../parson/parson.h"
 #include "openvswitch.h"
 
 #define OVS_DB_DEFAULT	"/var/run/openvswitch/db.sock";
@@ -75,68 +75,67 @@ struct ovs_bridge {
 
 static struct ovs_bridge *br_list;
 
-static int is_set(JSON_Array *j)
+static int is_set(json_t *j)
 {
-	return (!strcmp(json_array_get_string(j, 0), "set"));
+	return (!strcmp(json_string_value(json_array_get(j, 0)), "set"));
 }
 
-static int is_map(JSON_Array *j)
+static int is_map(json_t *j)
 {
-	return (!strcmp(json_array_get_string(j, 0), "map"));
+	return (!strcmp(json_string_value(json_array_get(j, 0)), "map"));
 }
 
-static int is_uuid(JSON_Array *j)
+static int is_uuid(json_t *j)
 {
-	return (!strcmp(json_array_get_string(j, 0), "uuid"));
+	return (!strcmp(json_string_value(json_array_get(j, 0)), "uuid"));
 }
 
-static int is_empty(JSON_Value *j)
+static int is_empty(json_t *j)
 {
-	return json_type(j) == JSONArray && is_set(json_array(j));
+	return json_is_array(j) && is_set(j);
 }
 
-static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
+static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 {
 	struct ovs_if *iface;
-	JSON_Object *jif;
-	JSON_Array *jarr;
+	json_t *jif, *jarr;
 	unsigned int i;
 
 	if (!is_uuid(uuid))
 		return NULL;
-	jif = json_object_get_object(jresult, "Interface");
-	jif = json_object_get_object(jif, json_array_get_string(uuid, 1));
-	jif = json_object_get_object(jif, "new");
+	jif = json_object_get(jresult, "Interface");
+	jif = json_object_get(jif, json_string_value(json_array_get(uuid, 1)));
+	jif = json_object_get(jif, "new");
 
 	iface = calloc(sizeof(*iface), 1);
 	if (!iface)
 		return NULL;
-	iface->name = strdup(json_object_get_string(jif, "name"));
-	iface->type = strdup(json_object_get_string(jif, "type"));
-	jarr = json_object_get_array(jif, "options");
+	iface->name = strdup(json_string_value(json_object_get(jif, "name")));
+	iface->type = strdup(json_string_value(json_object_get(jif, "type")));
+	jarr = json_object_get(jif, "options");
 	if (!strcmp(iface->type, "vxlan") && is_map(jarr)) {
-		jarr = json_array_get_array(jarr, 1);
-		for (i = 0; i < json_array_get_count(jarr); i++) {
-			JSON_Array *jkv;
+		jarr = json_array_get(jarr, 1);
+		for (i = 0; i < json_array_size(jarr); i++) {
+			json_t *jkv;
 			const char *key, *val;
 
-			jkv = json_array_get_array(jarr, i);
-			key = json_array_get_string(jkv, 0);
-			val = json_array_get_string(jkv, 1);
+			jkv = json_array_get(jarr, i);
+			key = json_string_value(json_array_get(jkv, 0));
+			val = json_string_value(json_array_get(jkv, 1));
 			if (!strcmp(key, "local_ip"))
 				iface->local_ip = strdup(val);
 			else if (!strcmp(key, "remote_ip"))
 				iface->remote_ip = strdup(val);
 		}
 	} else if (!strcmp(iface->type, "patch") && is_map(jarr)) {
-		jarr = json_array_get_array(jarr, 1);
-		for (i = 0; i < json_array_get_count(jarr); i++) {
-			JSON_Array *jkv;
+		jarr = json_array_get(jarr, 1);
+		for (i = 0; i < json_array_size(jarr); i++) {
+			json_t *jkv;
 			const char *key, *val;
 
-			jkv = json_array_get_array(jarr, i);
-			key = json_array_get_string(jkv, 0);
-			val = json_array_get_string(jkv, 1);
+			jkv = json_array_get(jarr, i);
+			key = json_string_value(json_array_get(jkv, 0));
+			val = json_string_value(json_array_get(jkv, 1));
 			if (!strcmp(key, "peer"))
 				iface->peer = strdup(val);
 		}
@@ -144,61 +143,59 @@ static struct ovs_if *parse_iface(JSON_Object *jresult, JSON_Array *uuid)
 	return iface;
 }
 
-static int parse_port_info(struct ovs_port *port, JSON_Object *jport)
+static int parse_port_info(struct ovs_port *port, json_t *jport)
 {
-	JSON_Value *jval;
-	JSON_Array *jarr;
+	json_t *jval, *jarr;
 	unsigned int i, cnt;
 
-	jval = json_object_get_value(jport, "tag");
+	jval = json_object_get(jport, "tag");
 	if (!is_empty(jval))
-		port->tag = json_number(jval);
-	jarr = json_object_get_array(jport, "trunks");
-	jarr = json_array_get_array(jarr, 1);
-	cnt = json_array_get_count(jarr);
+		port->tag = json_integer_value(jval);
+	jarr = json_object_get(jport, "trunks");
+	jarr = json_array_get(jarr, 1);
+	cnt = json_array_size(jarr);
 	if (cnt > 0) {
 		port->trunks = malloc(sizeof(*port->trunks) * cnt);
 		if (!port->trunks)
 			return ENOMEM;
 		port->trunks_count = cnt;
 		for (i = 0; i < cnt; i++)
-			port->trunks[i] = json_array_get_number(jarr, i);
+			port->trunks[i] = json_integer_value(json_array_get(jarr, i));
 	}
 
-	jval = json_object_get_value(jport, "bond_mode");
+	jval = json_object_get(jport, "bond_mode");
 	if (!is_empty(jval))
-		port->bond_mode = strdup(json_string(jval));
+		port->bond_mode = strdup(json_string_value(jval));
 	return 0;
 }
 
-static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
+static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 				   struct ovs_bridge *br)
 {
 	struct ovs_port *port;
 	struct ovs_if *ptr = NULL; /* GCC false positive */
 	struct ovs_if *iface;
-	JSON_Object *jport;
-	JSON_Array *jarr;
+	json_t *jport, *jarr;
 	unsigned int i;
 
 	if (!is_uuid(uuid))
 		return NULL;
-	jport = json_object_get_object(jresult, "Port");
-	jport = json_object_get_object(jport, json_array_get_string(uuid, 1));
-	jport = json_object_get_object(jport, "new");
+	jport = json_object_get(jresult, "Port");
+	jport = json_object_get(jport, json_string_value(json_array_get(uuid, 1)));
+	jport = json_object_get(jport, "new");
 
 	port = calloc(sizeof(*port), 1);
 	if (!port)
 		return NULL;
-	port->name = strdup(json_object_get_string(jport, "name"));
+	port->name = strdup(json_string_value(json_object_get(jport, "name")));
 	port->bridge = br;
 	if (parse_port_info(port, jport))
 		return NULL;
-	jarr = json_object_get_array(jport, "interfaces");
+	jarr = json_object_get(jport, "interfaces");
 	if (is_set(jarr)) {
-		jarr = json_array_get_array(jarr, 1);
-		for (i = 0; i < json_array_get_count(jarr); i++) {
-			iface = parse_iface(jresult, json_array_get_array(jarr, i));
+		jarr = json_array_get(jarr, 1);
+		for (i = 0; i < json_array_size(jarr); i++) {
+			iface = parse_iface(jresult, json_array_get(jarr, i));
 			if (!iface)
 				return NULL;
 			iface->port = port;
@@ -218,36 +215,35 @@ static struct ovs_port *parse_port(JSON_Object *jresult, JSON_Array *uuid,
 		port->iface_count = 1;
 	}
 
-	if (!strcmp(json_object_get_string(jport, "name"), br->name))
+	if (!strcmp(json_string_value(json_object_get(jport, "name")), br->name))
 		br->system = port;
 
 	return port;
 }
 
-static struct ovs_bridge *parse_bridge(JSON_Object *jresult, JSON_Array *uuid)
+static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
 {
 	struct ovs_bridge *br;
 	struct ovs_port *ptr = NULL; /* GCC false positive */
 	struct ovs_port *port;
-	JSON_Object *jbridge;
-	JSON_Array *jarr;
+	json_t *jbridge, *jarr;
 	unsigned int i;
 
 	if (!is_uuid(uuid))
 		return NULL;
-	jbridge = json_object_get_object(jresult, "Bridge");
-	jbridge = json_object_get_object(jbridge, json_array_get_string(uuid, 1));
-	jbridge = json_object_get_object(jbridge, "new");
+	jbridge = json_object_get(jresult, "Bridge");
+	jbridge = json_object_get(jbridge, json_string_value(json_array_get(uuid, 1)));
+	jbridge = json_object_get(jbridge, "new");
 
 	br = calloc(sizeof(*br), 1);
 	if (!br)
 		return NULL;
-	br->name = strdup(json_object_get_string(jbridge, "name"));
-	jarr = json_object_get_array(jbridge, "ports");
+	br->name = strdup(json_string_value(json_object_get(jbridge, "name")));
+	jarr = json_object_get(jbridge, "ports");
 	if (is_set(jarr)) {
-		jarr = json_array_get_array(jarr, 1);
-		for (i = 0; i < json_array_get_count(jarr); i++) {
-			port = parse_port(jresult, json_array_get_array(jarr, i), br);
+		jarr = json_array_get(jarr, 1);
+		for (i = 0; i < json_array_size(jarr); i++) {
+			port = parse_port(jresult, json_array_get(jarr, i), br);
 			if (!port)
 				return NULL;
 			if (!br->ports)
@@ -266,29 +262,27 @@ static struct ovs_bridge *parse_bridge(JSON_Object *jresult, JSON_Array *uuid)
 static struct ovs_bridge *parse(char *answer)
 {
 	struct ovs_bridge *list = NULL, *ptr, *br;
-	JSON_Value *jroot;
-	JSON_Object *jresult, *jovs;
-	JSON_Array *jarr;
+	json_t *jroot, *jresult, *jovs, *jarr;
 	unsigned int i;
 
-	jroot = json_parse_string(answer);
+	jroot = json_loads(answer, 0, NULL);
 	if (!jroot)
 		return NULL;
-	jresult = json_object_get_object(json_object(jroot), "result");
+	jresult = json_object_get(jroot, "result");
 	if (!jresult)
 		return NULL;
 	/* TODO: add the rest of error handling */
-	jovs = json_object_get_object(jresult, "Open_vSwitch");
-	if (json_object_get_count(jovs) != 1)
+	jovs = json_object_get(jresult, "Open_vSwitch");
+	if (json_object_size(jovs) != 1)
 		return NULL;
-	jovs = json_object_get_object(jovs, json_object_get_name(jovs, 0));
-	jovs = json_object_get_object(jovs, "new");
+	jovs = json_object_iter_value(json_object_iter(jovs));
+	jovs = json_object_get(jovs, "new");
 
-	jarr = json_object_get_array(jovs, "bridges");
+	jarr = json_object_get(jovs, "bridges");
 	if (is_set(jarr)) {
-		jarr = json_array_get_array(jarr, 1);
-		for (i = 0; i < json_array_get_count(jarr); i++) {
-			br = parse_bridge(jresult, json_array_get_array(jarr, i));
+		jarr = json_array_get(jarr, 1);
+		for (i = 0; i < json_array_size(jarr); i++) {
+			br = parse_bridge(jresult, json_array_get(jarr, i));
 			if (!br)
 				return NULL;
 			if (!list)
@@ -299,57 +293,49 @@ static struct ovs_bridge *parse(char *answer)
 		}
 	} else
 		list = parse_bridge(jresult, jarr);
+	json_decref(jroot);
 	return list;
 }
 
 
-static void add_table(JSON_Object *parmobj, char *table, ...)
+static void add_table(json_t *parmobj, char *table, ...)
 {
 	va_list ap;
-	JSON_Value *new;
-	JSON_Object *tableobj;
-	JSON_Array *cols;
+	json_t *tableobj, *cols;
 	char *s;
 
 	va_start(ap, table);
-	new = json_value_init_object();
-	tableobj = json_object(new);
-	json_object_set(parmobj, table, new);
-	new = json_value_init_array();
-	cols = json_array(new);
-	json_object_set(tableobj, "columns", new);
+	tableobj = json_object();
+	cols = json_array();
 	while ((s = va_arg(ap, char *)))
-		json_array_append(cols, json_value_init_string(s));
+		json_array_append_new(cols, json_string(s));
+	json_object_set_new(tableobj, "columns", cols);
+	json_object_set_new(parmobj, table, tableobj);
 	va_end(ap);
 }
 
 static char *construct_query(void)
 {
-	JSON_Value *root, *new;
-	JSON_Object *ro, *po;
-	JSON_Array *params;
+	json_t *root, *params, *po;
 	char *res;
 
-	root = json_value_init_object();
-	ro = json_object(root);
-	json_object_set(ro, "method", json_value_init_string("monitor"));
-	json_object_set(ro, "id", json_value_init_number(0));
+	root = json_object();
+	json_object_set_new(root, "method", json_string("monitor"));
+	json_object_set_new(root, "id", json_integer(0));
 
-	new = json_value_init_array();
-	params = json_array(new);
-	json_object_set(ro, "params", new);
-	json_array_append(params, json_value_init_string("Open_vSwitch"));
-	json_array_append(params, json_value_init_null());
-	new = json_value_init_object();
-	po = json_object(new);
-	json_array_append(params, new);
+	params = json_array();
+	json_array_append_new(params, json_string("Open_vSwitch"));
+	json_array_append_new(params, json_null());
+	po = json_object();
 	add_table(po, "Open_vSwitch", "bridges", "ovs_version", NULL);
 	add_table(po, "Bridge", "name", "ports", NULL);
 	add_table(po, "Port", "interfaces", "name", "tag", "trunks", "bond_mode", NULL);
 	add_table(po, "Interface", "name", "type", "options", "admin_state", "link_state", NULL);
+	json_array_append_new(params, po);
+	json_object_set_new(root, "params", params);
 
-	res = json_serialize(root);
-	json_value_free(root);
+	res = json_dumps(root, 0);
+	json_decref(root);
 	return res;
 }
 
@@ -610,7 +596,7 @@ static int ovs_global_post(struct netns_entry *root)
 		close(fd);
 		return 0;
 	}
-	json_free_serialization_string(str);
+	free(str);
 	str = read_all(fd);
 	br_list = parse(str);
 	free(str);

@@ -1,11 +1,18 @@
-CFLAGS=-W -Wall
+ifeq ($(jansson),)
+libs=$(shell pkg-config --libs jansson)
+else
+libs=$(jansson)/src/.libs/libjansson.a
+INCLUDE=-I$(jansson)/src
+endif
+CFLAGS=-W -Wall $(INCLUDE)
+
+all: check-libs plotnetcfg
 
 plotnetcfg: args.o dot.o ethtool.o handler.o if.o label.o main.o match.o netlink.o \
 	    netns.o tunnel.o utils.o \
-	    parson/parson.o \
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
 	    handlers/vlan.o
-	gcc -o $@ $+
+	gcc -o $@ $+ $(libs)
 
 args.o: args.c args.h
 dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h version.h
@@ -20,11 +27,9 @@ netns.o: netns.c netns.h compat.h handler.h if.h match.h utils.h
 tunnel.o: tunnel.c tunnel.h handler.h if.h match.h netns.h utils.h tunnel.h
 utils.o: utils.c utils.h if.h netns.h
 
-parson/parson.c: parson/parson.h
-
 handlers/bridge.o: handlers/bridge.c handlers/bridge.h handler.h
 handlers/master.o: handlers/master.c handlers/master.h handler.h match.h utils.h
-handlers/openvswitch.o: handlers/openvswitch.h parson/parson.h args.h handler.h label.h match.h tunnel.h utils.h
+handlers/openvswitch.o: handlers/openvswitch.h args.h handler.h label.h match.h tunnel.h utils.h
 handlers/veth.o: handlers/veth.c handlers/veth.h handler.h match.h utils.h
 handlers/vlan.o: handlers/vlan.c handlers/vlan.h handler.h netlink.h
 
@@ -32,10 +37,17 @@ version.h:
 	echo "#define VERSION \"`git describe 2> /dev/null || cat version`\"" > version.h
 
 clean:
-	rm -f version.h *.o handlers/*.o parson/*.o plotnetcfg
+	rm -f version.h *.o handlers/*.o plotnetcfg
 
 install: plotnetcfg
 	install -d $(DESTDIR)/usr/sbin/
 	install plotnetcfg $(DESTDIR)/usr/sbin/
 	install -d $(DESTDIR)/usr/share/man/man8/
 	install -m 644 plotnetcfg.8 $(DESTDIR)/usr/share/man/man8/
+
+.PHONY: check-libs
+check-libs:
+	@if [ "$(libs)" = "" ]; then \
+	echo "ERROR: libjansson not found."; \
+	exit 1; \
+	fi
