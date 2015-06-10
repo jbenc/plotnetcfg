@@ -16,12 +16,13 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <time.h>
-#include "handler.h"
-#include "if.h"
-#include "label.h"
-#include "netns.h"
-#include "utils.h"
-#include "version.h"
+#include "../frontend.h"
+#include "../handler.h"
+#include "../if.h"
+#include "../label.h"
+#include "../netns.h"
+#include "../utils.h"
+#include "../version.h"
 #include "dot.h"
 
 static void output_label(struct label *list)
@@ -123,7 +124,7 @@ static void output_warnings(struct netns_entry *root)
 	}
 }
 
-void dot_output(struct netns_entry *root)
+static void dot_output(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 	time_t cur;
@@ -146,4 +147,15 @@ void dot_output(struct netns_entry *root)
 	}
 	output_warnings(root);
 	printf("}\n");
+}
+
+static struct frontend fe_dot = {
+	.format = "dot",
+	.desc = "dot language (suitable for graphviz)",
+	.output = dot_output,
+};
+
+void frontend_dot_register(void)
+{
+	frontend_register(&fe_dot);
 }

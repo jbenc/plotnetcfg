@@ -170,7 +170,7 @@ void arg_get_help(arg_help_handler_t handler)
 			if (opt->short_name)
 				size -= str_append(buf, ", ", size, 0);
 			size -= str_append(buf, "--", size, 4);
-			size -= str_append(buf, opt->long_name, 12, 0);
+			size -= str_append(buf, opt->long_name, 16, 0);
 			if (opt->has_arg == 1)
 				size -= str_append(buf, "=ARG", size, 0);
 			else if (opt->has_arg == 2)

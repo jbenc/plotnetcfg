@@ -7,11 +7,11 @@ plotnetcfg \- plot diagram of network configuration
 .SH DESCRIPTION
 .B plotnetcfg
 is a tool that scans networking configuration on the machine and outputs
-a diagram of the configuration hierarchy in
-.B dot
-language.
+a diagram of the configuration hierarchy.
 
-The output can be converted by the
+By default, the output is in the
+.B dot
+language. The output can be converted by the
 .BR dot (1)
 tool from
 .BR graphviz (7)
@@ -47,6 +47,14 @@ See EXAMPLES for typical
 usage.
 
 .SH OPTIONS
+.TP
+\fB-f\fr, \fB--format\fR=\fIFORMAT\fR
+Set output format. When not specified,
+.B dot
+is used.
+.TP
+\fB-F\fr, \fB--list-formats\fR
+Print available output formats.
 .TP
 \fB-D\fr, \fB--ovs-db\fR=\fIPATH\fR
 Path to the socket used to communicate with Open vSwitch database server.

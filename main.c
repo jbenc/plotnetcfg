@@ -21,16 +21,23 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include "args.h"
-#include "dot.h"
 #include "netns.h"
 #include "utils.h"
 #include "version.h"
+#include "frontend.h"
+#include "frontends/dot.h"
 #include "handler.h"
 #include "handlers/bridge.h"
 #include "handlers/master.h"
 #include "handlers/openvswitch.h"
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
+
+static void register_frontends(void)
+{
+	frontend_init();
+	frontend_dot_register();
+}
 
 static void register_handlers(void)
 {
@@ -86,6 +93,7 @@ int main(int argc, char **argv)
 	int netns_ok, err;
 
 	arg_register_batch(options, ARRAY_SIZE(options));
+	register_frontends();
 	register_handlers();
 	if ((err = arg_parse(argc, argv)))
 		exit(err);
@@ -104,7 +112,10 @@ int main(int argc, char **argv)
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
 		exit(1);
 	}
-	dot_output(root);
+	if ((err = frontend_output(root))) {
+		fprintf(stderr, "Invalid output format specified.\n");
+		exit(1);
+	}
 	global_handler_cleanup(root);
 	netns_list_free(root);
 

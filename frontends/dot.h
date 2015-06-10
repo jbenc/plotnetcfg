@@ -13,11 +13,9 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _DOT_H
-#define _DOT_H
+#ifndef _FRONTENDS_DOT_H
+#define _FRONTENDS_DOT_H
 
-struct netns_entry;
-
-void dot_output(struct netns_entry *root);
+void frontend_dot_register(void);
 
 #endif

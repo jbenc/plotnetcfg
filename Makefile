@@ -8,19 +8,20 @@ CFLAGS=-W -Wall $(INCLUDE)
 
 all: check-libs plotnetcfg
 
-plotnetcfg: args.o dot.o ethtool.o handler.o if.o label.o main.o match.o netlink.o \
+plotnetcfg: args.o ethtool.o frontend.o handler.o if.o label.o main.o match.o netlink.o \
 	    netns.o tunnel.o utils.o \
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
-	    handlers/vlan.o
+	    handlers/vlan.o \
+	    frontends/dot.o
 	gcc -o $@ $+ $(libs)
 
 args.o: args.c args.h
-dot.o: dot.c dot.h handler.h if.h label.h netns.h utils.h version.h
 ethtool.o: ethtool.c ethtool.h
+frontend.o: frontend.c frontend.h args.h utils.h
 handler.o: handler.c handler.h if.h netns.h
 if.o: if.c if.h compat.h ethtool.h handler.h label.h netlink.h utils.h
 label.o: label.h label.c utils.h
-main.o: main.c args.h dot.h handler.h netns.h utils.h version.h
+main.o: main.c args.h frontend.h handler.h netns.h utils.h version.h
 match.o: match.c match.h if.h netns.h
 netlink.o: netlink.c netlink.h utils.h
 netns.o: netns.c netns.h compat.h handler.h if.h match.h utils.h
@@ -32,6 +33,9 @@ handlers/master.o: handlers/master.c handlers/master.h handler.h match.h utils.h
 handlers/openvswitch.o: handlers/openvswitch.h args.h handler.h label.h match.h tunnel.h utils.h
 handlers/veth.o: handlers/veth.c handlers/veth.h handler.h match.h utils.h
 handlers/vlan.o: handlers/vlan.c handlers/vlan.h handler.h netlink.h
+
+frontends/dot.o: frontends/dot.c frontends/dot.h frontend.h handler.h if.h label.h netns.h \
+		 utils.h version.h
 
 version.h:
 	echo "#define VERSION \"`git describe 2> /dev/null || cat version`\"" > version.h
