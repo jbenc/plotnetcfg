@@ -29,9 +29,11 @@ for details.
 
 .B plotnetcfg
 is lightweight with as few library dependencies as possible. Currently, the
-only dependency is
-.BR libc .
-This allows the
+only dependencies are
+.B libc
+and
+.BR libjansson .
+Optionally, it can be statically linked against the latter which allows the
 .B plotnetcfg
 binary to be copied to a target machine and run there (provided it has the
 same or newer version of
