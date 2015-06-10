@@ -217,6 +217,7 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->edge_label);
 	label_free(entry->label);
 	list_free(entry->addr, (destruct_f)if_addr_destruct);
+	list_free(entry->rev_master, NULL);
 }
 
 void if_list_free(struct if_entry *list)
@@ -253,4 +254,24 @@ int if_add_warning(struct if_entry *entry, char *fmt, ...)
 out:
 	va_end(ap);
 	return err;
+}
+
+int if_list_build_rev(struct if_entry *list)
+{
+	while (list) {
+		if (list->master) {
+			struct if_list_entry *le;
+
+			le = malloc(sizeof(*le));
+			if (!le)
+				return ENOMEM;
+			le->entry = list;
+			le->next = list->master->rev_master;
+			list->master->rev_master = le;
+		}
+		if (list->link)
+			list->link->rev_link = list->link;
+		list = list->next;
+	}
+	return 0;
 }

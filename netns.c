@@ -330,6 +330,18 @@ static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *r
 	rtnl_close(&hnd);
 }
 
+static int netns_build_rev(struct netns_entry *root)
+{
+	struct netns_entry *entry;
+	int err;
+
+	for (entry = root; entry; entry = entry->next) {
+		if ((err = if_list_build_rev(entry->ifaces)))
+			return err;
+	}
+	return 0;
+}
+
 int netns_list(struct netns_entry **result, int supported)
 {
 	struct netns_entry *entry;
@@ -371,6 +383,8 @@ int netns_list(struct netns_entry **result, int supported)
 	if ((err = global_handler_post(*result)))
 		return err;
 	if ((err = handler_post(*result)))
+		return err;
+	if ((err = netns_build_rev(*result)))
 		return err;
 	return 0;
 }

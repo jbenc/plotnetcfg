@@ -32,6 +32,11 @@ struct if_addr_entry {
 	struct addr peer;
 };
 
+struct if_list_entry {
+	struct if_list_entry *next;
+	struct if_entry *entry;
+};
+
 struct if_entry {
 	struct if_entry *next;
 	struct netns_entry *ns;
@@ -54,6 +59,9 @@ struct if_entry {
 	char *edge_label;
 	void *handler_private;
 	int warnings;
+	/* reverse fields needed by some frontends: */
+	struct if_list_entry *rev_master;
+	struct if_entry *rev_link;
 };
 
 #define IF_LOOPBACK	1
@@ -68,5 +76,6 @@ void if_list_free(struct if_entry *list);
 void if_append(struct if_entry **list, struct if_entry *item);
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...);
+int if_list_build_rev(struct if_entry *list);
 
 #endif
