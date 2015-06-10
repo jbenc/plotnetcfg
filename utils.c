@@ -62,10 +62,10 @@ char *ifid(struct if_entry *entry)
 		/* root ns */
 		ns = "";
 	if (entry->internal_ns)
-		snprintf(buf, sizeof(buf), "\"//%s/%s/%s\"",
+		snprintf(buf, sizeof(buf), "//%s/%s/%s",
 			 entry->internal_ns, ns, entry->if_name);
 	else
-		snprintf(buf, sizeof(buf), "\"%s/%s\"",
+		snprintf(buf, sizeof(buf), "%s/%s",
 			 ns, entry->if_name);
 	return buf;
 }
