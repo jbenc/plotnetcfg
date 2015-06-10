@@ -12,7 +12,7 @@ plotnetcfg: args.o ethtool.o frontend.o handler.o if.o label.o main.o match.o ne
 	    netns.o tunnel.o utils.o \
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
 	    handlers/vlan.o \
-	    frontends/dot.o
+	    frontends/dot.o frontends/json.o
 	gcc -o $@ $+ $(libs)
 
 args.o: args.c args.h
@@ -36,18 +36,22 @@ handlers/vlan.o: handlers/vlan.c handlers/vlan.h handler.h netlink.h
 
 frontends/dot.o: frontends/dot.c frontends/dot.h frontend.h handler.h if.h label.h netns.h \
 		 utils.h version.h
+frontends/json.o: frontends/json.c frontends/json.h frontend.h if.h label.h netns.h utils.h \
+		  version.h
 
 version.h:
 	echo "#define VERSION \"`git describe 2> /dev/null || cat version`\"" > version.h
 
 clean:
-	rm -f version.h *.o handlers/*.o plotnetcfg
+	rm -f version.h *.o frontends/*.o handlers/*.o plotnetcfg
 
 install: plotnetcfg
 	install -d $(DESTDIR)/usr/sbin/
 	install plotnetcfg $(DESTDIR)/usr/sbin/
 	install -d $(DESTDIR)/usr/share/man/man8/
+	install -d $(DESTDIR)/usr/share/man/man5/
 	install -m 644 plotnetcfg.8 $(DESTDIR)/usr/share/man/man8/
+	install -m 644 plotnetcfg-json.5 $(DESTDIR)/usr/share/man/man5/
 
 .PHONY: check-libs
 check-libs:

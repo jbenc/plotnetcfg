@@ -26,6 +26,7 @@
 #include "version.h"
 #include "frontend.h"
 #include "frontends/dot.h"
+#include "frontends/json.h"
 #include "handler.h"
 #include "handlers/bridge.h"
 #include "handlers/master.h"
@@ -37,6 +38,7 @@ static void register_frontends(void)
 {
 	frontend_init();
 	frontend_dot_register();
+	frontend_json_register();
 }
 
 static void register_handlers(void)

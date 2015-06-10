@@ -1,0 +1,187 @@
+.TH plotnetcfg-json 5 "10 June 2015"
+.SH NAME
+plotnetcfg \- json output format
+.SH DESCRIPTION
+
+.SS Root object fields
+
+.TP
+format
+.I (number)
+Currently 1. Will be increased if incompatible changes are introduced.
+A tool parsing the json output should refuse any format it's not aware of.
+Note that adding of new fields is not considered to be an incompatible
+change.
+
+.TP
+version
+.I (string)
+Plotnetcfg version.
+
+.TP
+date
+.I (string)
+Time and date when the data were gathered, in
+.BR ctime (3)
+format.
+
+.TP
+namespaces
+.I (array)
+Array of name space objects. The first one is always the root name space.
+
+.SS Name space object fields
+
+.TP
+name
+.I (string)
+Name of the name space suitable for user consumption. This in general cannot
+be used for machine consumption, e.g. switching to the name space. The root
+name space has an empty name.
+
+.TP
+interfaces
+.I (array)
+Array of interface objects.
+
+.TP
+warnings
+.I (array)
+If present, an array of strings. Contains error messages encountered when
+gathering data in the given name space.
+
+.SS Interface object fields
+
+.TP
+id
+.I (string)
+Unique identifier of the interface. This is an arbitrary opaque string and
+the consumer should not make any assumption of its contents (apart of not
+containing null characters). It should not be displayed to the user, the
+sole purpose of this field is linking to other interfaces. The identifier is
+globally unique, it is safe to assume that interfaces with the same name in
+different name spaces have a different id.
+
+.TP
+name
+.I (string)
+User visible name of the interface. Usually (but not always) the name of the
+corresponding Linux interface. This is not unique between name spaces.
+
+.TP
+driver
+.I (string)
+The kernel module (driver) behind the interface. May be empty in some
+specific cases.
+
+.TP
+info
+.I (array)
+Array of strings. Contains additional information about the interface,
+formatted. An example is tunnel endpoints. The exact content is dependent on
+the type of the interface.
+
+.TP
+addresses
+.I (array)
+Array of address objects.
+
+.TP
+mtu
+.I (number)
+Interface MTU.
+
+.TP
+type
+.I (string)
+.RS
+"device": normal interface. Most interfaces are of this type.
+.P
+"internal": this interface is not backed up by a Linux interface. Can be
+often found with Open vSwitch.
+.P
+Further types are possible with future plotnetcfg versions. Adding them will
+not be considered a format change.
+.RE
+
+.TP
+state
+.I (string)
+.RS
+"down": the interface is administratively disabled.
+.P
+"up": the interface is up and operating.
+.P
+"up_no_link": the interface is up but has no link.
+.P
+"none": state cannot be determined or is not applicable to this kind of
+interface.
+.P
+More states are possible to be added in future plotnetcfg versions. Adding
+them will not be considered a format change.
+.RE
+
+.TP
+warning
+.I (bool)
+There was a problem gathering data about this interface. Details are in the
+name space warnings field. The purpose of this flag is for visual
+representation of this interface as not having complete data available.
+Not present if there was no error.
+
+.TP
+parent
+.I (object)
+The parent interface, as a connection object. Not present if there's no
+parent.
+
+.TP
+children
+.I (array)
+Array of children interfaces, as connection objects. Not present if there
+are no children.
+
+.TP
+peer
+.I (object)
+The peer interface, as a connection object. Not present if there's no peer.
+
+.SS Connection object fields
+
+.TP
+info
+.I (array)
+Array of strings. Contains additional information about the connection
+between the two interfaces, formatted. May be an empty array.
+
+.TP
+target
+.I (string)
+Id of the interface that is being linked to.
+
+.SS Address object fields
+
+.TP
+family
+.I (string)
+Currently only "INET" or "INET6". More types will be added in the future
+(without considering it a format change).
+
+.TP
+address
+.I (string)
+Address formatted for user consumption. May include net mask. This field
+should be generally machine parseable.
+
+.TP
+peer
+.I (object)
+If present, the peer address corresponding to this address. It's of the
+address object type but cannot contain futher peer field.
+
+.SH SEE ALSO
+.BR plotnetcfg (8)
+
+.SH AUTHOR
+.B plotnetcfg
+was written and is maintained by Jiri Benc <jbenc@redhat.com>.
