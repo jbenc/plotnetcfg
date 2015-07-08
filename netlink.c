@@ -16,22 +16,24 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <linux/netlink.h>
+#include <linux/genetlink.h>
 #include <linux/rtnetlink.h>
 #include "utils.h"
 #include "netlink.h"
 
-int rtnl_open(struct rtnl_handle *hnd)
+static int nl_open(struct nl_handle *hnd, int family)
 {
 	int bufsize;
 	int err;
 	struct sockaddr_nl sa;
 	socklen_t sa_len;
 
-	hnd->fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	hnd->fd = socket(AF_NETLINK, SOCK_RAW, family);
 	if (hnd->fd < 0)
 		return -errno;
 	hnd->seq = 0;
@@ -58,7 +60,7 @@ err_out:
 	return err;
 }
 
-void rtnl_close(struct rtnl_handle *hnd)
+void nl_close(struct nl_handle *hnd)
 {
 	close(hnd->fd);
 }
@@ -68,16 +70,31 @@ void nlmsg_free(struct nlmsg_entry *entry)
 	list_free(entry, NULL);
 }
 
-int rtnl_exchange(struct rtnl_handle *hnd,
-		  struct nlmsghdr *src, struct nlmsg_entry **dest)
+int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)
 {
 	struct sockaddr_nl sa = {
 		.nl_family = AF_NETLINK,
 	};
-	struct iovec iov = {
-		.iov_base = src,
-		.iov_len = src->nlmsg_len,
+	struct msghdr msg = {
+		.msg_name = &sa,
+		.msg_namelen = sizeof(sa),
+		.msg_iov = iov,
+		.msg_iovlen = iovlen,
 	};
+	struct nlmsghdr *src = iov->iov_base;
+
+	src->nlmsg_seq = ++hnd->seq;
+	if (sendmsg(hnd->fd, &msg, 0) < 0)
+		return errno;
+	return 0;
+}
+
+int nl_recv(struct nl_handle *hnd, struct nlmsg_entry **dest, int is_dump)
+{
+	struct sockaddr_nl sa = {
+		.nl_family = AF_NETLINK,
+	};
+	struct iovec iov;
 	struct msghdr msg = {
 		.msg_name = &sa,
 		.msg_namelen = sizeof(sa),
@@ -85,19 +102,12 @@ int rtnl_exchange(struct rtnl_handle *hnd,
 		.msg_iovlen = 1,
 	};
 	char buf[16384];
-	int is_dump;
 	int len, err;
 	struct nlmsghdr *n;
 	struct nlmsg_entry *ptr = NULL; /* GCC false positive */
 	struct nlmsg_entry *entry;
 
 	*dest = NULL;
-
-	src->nlmsg_seq = ++hnd->seq;
-	is_dump = !!(src->nlmsg_flags & NLM_F_DUMP);
-	if (sendmsg(hnd->fd, &msg, 0) < 0)
-		return errno;
-
 	while (1) {
 		iov.iov_base = buf;
 		iov.iov_len = sizeof(buf);
@@ -143,7 +153,51 @@ err_out:
 	return err;
 }
 
-int rtnl_dump(struct rtnl_handle *hnd, int family, int type, struct nlmsg_entry **dest)
+int nl_exchange(struct nl_handle *hnd,
+		struct nlmsghdr *src, struct nlmsg_entry **dest)
+{
+	struct iovec iov = {
+		.iov_base = src,
+		.iov_len = src->nlmsg_len,
+	};
+	int is_dump;
+	int err;
+
+	is_dump = !!(src->nlmsg_flags & NLM_F_DUMP);
+	err = nl_send(hnd, &iov, 1);
+	if (err)
+		return err;
+	return nl_recv(hnd, dest, is_dump);
+}
+
+/* The original payload is not freed. Returns 0 in case of error, length
+ * of *dest otherwise. *dest is newly allocated. */
+int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
+		void **dest)
+{
+	struct nlattr *nla;
+	int len = strlen(str) + 1;
+	int size;
+
+	size = NLA_ALIGN(orig_len) + NLA_HDRLEN + NLA_ALIGN(len);
+	*dest = calloc(size, 1);
+	if (!*dest)
+		return 0;
+	if (orig_len)
+		memcpy(*dest, orig, orig_len);
+	nla = *dest + NLA_ALIGN(orig_len);
+	nla->nla_len = NLA_HDRLEN + len;
+	nla->nla_type = nla_type;
+	memcpy(nla + 1, str, len);
+	return size;
+}
+
+int rtnl_open(struct nl_handle *hnd)
+{
+	return nl_open(hnd, NETLINK_ROUTE);
+}
+
+int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest)
 {
 	struct {
 		struct nlmsghdr n;
@@ -154,9 +208,8 @@ int rtnl_dump(struct rtnl_handle *hnd, int family, int type, struct nlmsg_entry 
 	req.n.nlmsg_len = sizeof(req);
 	req.n.nlmsg_type = type;
 	req.n.nlmsg_flags = NLM_F_DUMP | NLM_F_REQUEST;
-	req.n.nlmsg_seq = ++hnd->seq;
 	req.i.ifi_family = family;
-	return rtnl_exchange(hnd, &req.n, dest);
+	return nl_exchange(hnd, &req.n, dest);
 }
 
 void rtnl_parse(struct rtattr *tb[], int max, struct rtattr *rta, int len)
@@ -172,4 +225,75 @@ void rtnl_parse(struct rtattr *tb[], int max, struct rtattr *rta, int len)
 void rtnl_parse_nested(struct rtattr *tb[], int max, struct rtattr *rta)
 {
 	rtnl_parse(tb, max, RTA_DATA(rta), RTA_PAYLOAD(rta));
+}
+
+int genl_open(struct nl_handle *hnd)
+{
+	return nl_open(hnd, NETLINK_GENERIC);
+}
+
+int genl_request(struct nl_handle *hnd,
+		 int type, int cmd, void *payload, int payload_len,
+		 struct nlmsg_entry **dest)
+{
+	struct {
+		struct nlmsghdr n;
+		struct genlmsghdr g;
+	} req;
+	struct iovec iov[2];
+	int err;
+
+	memset(&req, 0, sizeof(req));
+	req.n.nlmsg_len = sizeof(req) + payload_len;
+	req.n.nlmsg_type = type;
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.g.cmd = cmd;
+	req.g.version = 1;
+
+	iov[0].iov_base = &req;
+	iov[0].iov_len = sizeof(req);
+	iov[1].iov_base = payload;
+	iov[1].iov_len = payload_len;
+	err = nl_send(hnd, iov, 2);
+	if (err)
+		return err;
+	return nl_recv(hnd, dest, 0);
+}
+
+unsigned int genl_family_id(struct nl_handle *hnd, const char *name)
+{
+	unsigned int res = 0;
+	struct nlattr *nla;
+	int len;
+	struct nlmsg_entry *dest;
+	void *ptr;
+
+	len = nla_add_str(NULL, 0, CTRL_ATTR_FAMILY_NAME, name, &ptr);
+	if (!len)
+		return 0;
+	if (genl_request(hnd, GENL_ID_CTRL, CTRL_CMD_GETFAMILY,
+			 ptr, len, &dest)) {
+		free(ptr);
+		return 0;
+	}
+	free(ptr);
+
+	len = dest->h.nlmsg_len - NLMSG_HDRLEN - GENL_HDRLEN;
+	ptr = (void *)&dest->h + NLMSG_HDRLEN + GENL_HDRLEN;
+
+	while (len > NLA_HDRLEN) {
+		nla = ptr;
+		if (nla->nla_type == CTRL_ATTR_FAMILY_ID &&
+		    nla->nla_len >= NLA_HDRLEN + 2) {
+			res = *(uint16_t *)(nla + 1);
+			break;
+		}
+
+		ptr += NLMSG_ALIGN(nla->nla_len);
+		len -= NLMSG_ALIGN(nla->nla_len);
+	}
+
+	nlmsg_free(dest);
+	return res;
+
 }

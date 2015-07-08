@@ -162,7 +162,7 @@ static struct if_entry *if_alloc(void)
 
 int if_list(struct if_entry **result, struct netns_entry *ns)
 {
-	struct rtnl_handle hnd;
+	struct nl_handle hnd;
 	struct nlmsg_entry *linfo, *ainfo, *l;
 	struct if_entry *entry, *ptr = NULL;
 	int err;
@@ -197,7 +197,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 
 	nlmsg_free(linfo);
 	nlmsg_free(ainfo);
-	rtnl_close(&hnd);
+	nl_close(&hnd);
 	return 0;
 }
 

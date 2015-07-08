@@ -19,7 +19,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
-struct rtnl_handle {
+struct nl_handle {
 	int fd;
 	unsigned int pid;
 	unsigned int seq;
@@ -30,14 +30,29 @@ struct nlmsg_entry {
 	struct nlmsghdr h;
 };
 
-int rtnl_open(struct rtnl_handle *hnd);
-void rtnl_close(struct rtnl_handle *hnd);
-int rtnl_exchange(struct rtnl_handle *hnd,
-		  struct nlmsghdr *src, struct nlmsg_entry **dest);
-int rtnl_dump(struct rtnl_handle *hnd, int family, int type, struct nlmsg_entry **dest);
+/* all netlink families */
+
+void nl_close(struct nl_handle *hnd);
+int nl_exchange(struct nl_handle *hnd,
+		struct nlmsghdr *src, struct nlmsg_entry **dest);
+void nlmsg_free(struct nlmsg_entry *entry);
+
+int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
+		void **dest);
+
+/* rtnetlink */
+
+int rtnl_open(struct nl_handle *hnd);
+int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest);
 void rtnl_parse(struct rtattr *tb[], int max, struct rtattr *rta, int len);
 void rtnl_parse_nested(struct rtattr *tb[], int max, struct rtattr *rta);
 
-void nlmsg_free(struct nlmsg_entry *entry);
+/* genetlink */
+
+int genl_open(struct nl_handle *hnd);
+int genl_request(struct nl_handle *hnd,
+		 int type, int cmd, void *payload, int payload_len,
+		 struct nlmsg_entry **dest);
+unsigned int genl_family_id(struct nl_handle *hnd, const char *name);
 
 #endif

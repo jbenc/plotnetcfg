@@ -263,7 +263,7 @@ static int netns_add_proc_list(struct netns_entry *root)
 }
 
 /* Returns -1 if netnsids are not supported. */
-static int netns_get_id(struct rtnl_handle *hnd, struct netns_entry *entry)
+static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 {
 	struct {
 		struct nlmsghdr n;
@@ -283,7 +283,7 @@ static int netns_get_id(struct rtnl_handle *hnd, struct netns_entry *entry)
 	src.a.rta_type = NETNSA_FD;
 	src.a.rta_len = RTA_LENGTH(sizeof(uint32_t));
 	src.fd = entry->fd;
-	res = rtnl_exchange(hnd, &src.n, &dst);
+	res = nl_exchange(hnd, &src.n, &dst);
 	if (res || !dst)
 		return -1;
 	res = -1;
@@ -302,7 +302,7 @@ out:
  * supported by kernel), we fail back to heuristics. */
 static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *root)
 {
-	struct rtnl_handle hnd;
+	struct nl_handle hnd;
 	struct netns_entry *entry;
 	struct netns_id *nsid, *ptr = NULL;
 	int id;
@@ -327,7 +327,7 @@ static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *r
 			ptr->next = nsid;
 		ptr = nsid;
 	}
-	rtnl_close(&hnd);
+	nl_close(&hnd);
 }
 
 static int netns_build_rev(struct netns_entry *root)
