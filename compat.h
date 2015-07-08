@@ -45,4 +45,12 @@
 	((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct rtgenmsg))))
 #endif
 
+#define OVS_VPORT_FAMILY	"ovs_vport"
+#define OVS_VPORT_CMD_GET	3
+#define OVS_VPORT_ATTR_NAME	3
+
+struct ovs_header {
+	int dp_ifindex;
+};
+
 #endif

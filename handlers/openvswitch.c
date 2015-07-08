@@ -22,11 +22,11 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <linux/openvswitch.h>
 #include <linux/un.h>
 #include <net/if.h>
 #include <unistd.h>
 #include "../args.h"
+#include "../compat.h"
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
