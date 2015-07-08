@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <linux/openvswitch.h>
 #include <linux/un.h>
 #include <net/if.h>
 #include <unistd.h>
@@ -30,6 +31,7 @@
 #include "../if.h"
 #include "../label.h"
 #include "../match.h"
+#include "../netlink.h"
 #include "../netns.h"
 #include "../tunnel.h"
 #include "../utils.h"
@@ -37,6 +39,7 @@
 
 #define OVS_DB_DEFAULT	"/var/run/openvswitch/db.sock";
 static char *db;
+static unsigned int vport_genl_id;
 
 struct ovs_if {
 	struct ovs_if *next;
@@ -384,6 +387,46 @@ static char *read_all(int fd)
 	}
 }
 
+static int check_vport(struct netns_entry *ns, struct if_entry *entry)
+{
+	struct nl_handle hnd;
+	struct ovs_header oh;
+	void *payload;
+	struct nlmsg_entry *dest;
+	int len;
+	int err;
+
+	/* Be paranoid. If anything goes wrong, assume the interace is not
+	 * a vport. It's better to present an interface as unconnected to
+	 * the bridge when it's in fact connected, than vice versa.
+	 */
+	if (!vport_genl_id)
+		return 0;
+	if (netns_switch(ns))
+		return 0;
+	if (genl_open(&hnd))
+		return 0;
+
+	oh.dp_ifindex = 0;
+	len = nla_add_str(&oh, sizeof(oh), OVS_VPORT_ATTR_NAME, entry->if_name,
+			  &payload);
+	if (!len)
+		goto out_hnd;
+	err = genl_request(&hnd, vport_genl_id, OVS_VPORT_CMD_GET,
+			   payload, len, &dest);
+	if (err)
+		goto out_payload;
+	/* Keep err = 0. We're only interested whether the call succeeds or
+	 * not, we don't care about the returned data.
+	 */
+	nlmsg_free(dest);
+out_payload:
+	free(payload);
+out_hnd:
+	nl_close(&hnd);
+	return !err;
+}
+
 static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
@@ -404,6 +447,16 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	if (!strcmp(iface->type, "internal") &&
 	    strcmp(entry->driver, "openvswitch"))
 		return 0;
+
+	/* We've got a match. This still may not mean the interface is
+	 * actually connected in the kernel datapath. Newer kernels set
+	 * master (at least for netdev interface type) to ovs-system, which
+	 * we check above. For older kernels, we need to be more clever.
+	 */
+	if (!search_for_system && !entry->master &&
+	    !check_vport(iface->port->bridge->system->ifaces->link->ns, entry))
+		return 0;
+
 	weight = 1;
 	if (!search_for_system) {
 		if (iface->port->bridge->system->ifaces->link->ns == entry->ns)
@@ -629,12 +682,26 @@ static void destruct_bridge(struct ovs_bridge *br)
 	list_free(br->ports, (destruct_f)destruct_port);
 }
 
+static void ovs_global_init(void)
+{
+	struct nl_handle hnd;
+
+	if (genl_open(&hnd)) {
+		vport_genl_id = 0;
+		return;
+	}
+	vport_genl_id = genl_family_id(&hnd, OVS_VPORT_FAMILY);
+	nl_close(&hnd);
+	return;
+}
+
 static void ovs_global_cleanup(_unused struct netns_entry *root)
 {
 	list_free(br_list, (destruct_f)destruct_bridge);
 }
 
 static struct global_handler gh_ovs = {
+	.init = ovs_global_init,
 	.post = ovs_global_post,
 	.cleanup = ovs_global_cleanup,
 };

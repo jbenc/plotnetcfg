@@ -30,7 +30,7 @@ utils.o: utils.c utils.h if.h netns.h
 
 handlers/bridge.o: handlers/bridge.c handlers/bridge.h handler.h
 handlers/master.o: handlers/master.c handlers/master.h handler.h match.h utils.h
-handlers/openvswitch.o: handlers/openvswitch.h args.h handler.h label.h match.h tunnel.h utils.h
+handlers/openvswitch.o: handlers/openvswitch.h args.h handler.h label.h match.h netlink.h tunnel.h utils.h
 handlers/veth.o: handlers/veth.c handlers/veth.h handler.h match.h utils.h
 handlers/vlan.o: handlers/vlan.c handlers/vlan.h handler.h netlink.h
 
