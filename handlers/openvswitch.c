@@ -387,7 +387,7 @@ static char *read_all(int fd)
 static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
-	int search_for_system = !iface->port->bridge->system->link;
+	int search_for_system = !iface->port->bridge->system->ifaces->link;
 	int weight;
 
 	if (!search_for_system &&
@@ -406,7 +406,7 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 		return 0;
 	weight = 1;
 	if (!search_for_system) {
-		if (iface->port->bridge->system->link->ns == entry->ns)
+		if (iface->port->bridge->system->ifaces->link->ns == entry->ns)
 			weight++;
 	} else {
 		if (!entry->ns->name)
