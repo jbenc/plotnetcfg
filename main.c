@@ -110,6 +110,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	global_handler_init();
 	if ((err = netns_list(&root, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
 		exit(1);

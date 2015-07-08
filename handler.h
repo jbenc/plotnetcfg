@@ -52,11 +52,13 @@ void handler_generic_cleanup(struct if_entry *entry);
 
 struct global_handler {
 	struct global_handler *next;
+	void (*init)(void);
 	int (*post)(struct netns_entry *root);
 	void (*cleanup)(struct netns_entry *root);
 };
 
 void global_handler_register(struct global_handler *h);
+void global_handler_init(void);
 int global_handler_post(struct netns_entry *root);
 void global_handler_cleanup(struct netns_entry *root);
 

@@ -107,14 +107,14 @@ void handler_generic_cleanup(struct if_entry *entry)
 	free(entry->handler_private);
 }
 
-#define ghandler_loop(method, root, ...)				\
+#define ghandler_loop(method, ...)				\
 	{								\
 		struct global_handler *ptr;				\
 									\
 		for (ptr = ghandlers; ptr; ptr = ptr->next) {		\
 			if (!ptr->method)	\
 				continue;				\
-			ptr->method(root, ##__VA_ARGS__);		\
+			ptr->method(__VA_ARGS__);			\
 		}							\
 	}
 
@@ -127,6 +127,11 @@ void global_handler_register(struct global_handler *h)
 	}
 	ghandlers_tail->next = h;
 	ghandlers_tail = h;
+}
+
+void global_handler_init(void)
+{
+	ghandler_loop(init);
 }
 
 int global_handler_post(struct netns_entry *root)
