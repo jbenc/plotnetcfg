@@ -26,7 +26,6 @@
 #include <net/if.h>
 #include <unistd.h>
 #include "../args.h"
-#include "../compat.h"
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
@@ -36,6 +35,8 @@
 #include "../tunnel.h"
 #include "../utils.h"
 #include "openvswitch.h"
+
+#include "../compat.h"
 
 #define OVS_DB_DEFAULT	"/var/run/openvswitch/db.sock";
 static char *db;
