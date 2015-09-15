@@ -5,8 +5,8 @@ Design goals are:
 1. Lighweight. It should have no run time dependencies. Just scp the
    binary to the target machine.
 2. Works across net namespaces.
-3. Allows multiple frontends. (Right now, only graphviz fronted is
-   implemented.)
+3. Allows multiple frontends (graphviz and json frontends are currently
+   supported).
 
 
 Example usage:
