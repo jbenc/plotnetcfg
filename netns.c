@@ -245,7 +245,7 @@ static int netns_add_proc_list(struct netns_entry *root)
 		if (!strcmp(de->d_name, ".") ||
 		    !strcmp(de->d_name, ".."))
 			continue;
-		if (de->d_name[0] < '0' || de->d_name[1] > '9')
+		if (de->d_name[0] < '0' || de->d_name[0] > '9')
 			continue;
 		err = netns_get_proc_entry(&entry, root, de->d_name);
 		if (err < 0) {
