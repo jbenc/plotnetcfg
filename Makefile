@@ -2,9 +2,9 @@ ifeq ($(jansson),)
 libs=$(shell pkg-config --libs jansson)
 else
 libs=$(jansson)/src/.libs/libjansson.a
-INCLUDE=-I$(jansson)/src
+CPPFLAGS+=-I$(jansson)/src
 endif
-CFLAGS+=-W -Wall $(INCLUDE)
+CFLAGS?=-W -Wall
 
 all: check-libs plotnetcfg
 
