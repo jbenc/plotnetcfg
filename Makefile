@@ -4,7 +4,8 @@ else
 libs=$(jansson)/src/.libs/libjansson.a
 INCLUDE=-I$(jansson)/src
 endif
-CFLAGS=-W -Wall $(INCLUDE)
+
+CFLAGS=-W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 
 all: check-libs plotnetcfg
 
@@ -13,7 +14,7 @@ plotnetcfg: args.o ethtool.o frontend.o handler.o if.o label.o main.o match.o ne
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
 	    handlers/vlan.o \
 	    frontends/dot.o frontends/json.o
-	gcc -o $@ $+ $(libs)
+	$(CC) $(LDFLAGS) -o $@ $+ $(libs)
 
 args.o: args.c args.h
 ethtool.o: ethtool.c ethtool.h
