@@ -411,8 +411,10 @@ static int check_vport(struct netns_entry *ns, struct if_entry *entry)
 	oh.dp_ifindex = 0;
 	len = nla_add_str(&oh, sizeof(oh), OVS_VPORT_ATTR_NAME, entry->if_name,
 			  &payload);
-	if (!len)
+	if (!len) { 
+		err = ENOMEM;
 		goto out_hnd;
+	}
 	err = genl_request(&hnd, vport_genl_id, OVS_VPORT_CMD_GET,
 			   payload, len, &dest);
 	if (err)
