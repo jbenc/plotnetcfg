@@ -85,7 +85,7 @@ int handler_post(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
-	int err;
+	int err = 0;
 
 	for (ns = root; ns; ns = ns->next) {
 		for (entry = ns->ifaces; entry; entry = entry->next) {
