@@ -31,6 +31,7 @@
 #include "netlink.h"
 #include "utils.h"
 #include "netns.h"
+#include "sysfs.h"
 
 #include "compat.h"
 
@@ -358,6 +359,10 @@ int netns_list(struct netns_entry **result, int supported)
 		if (err)
 			return err;
 	}
+
+	if ((err = sysfs_init()))
+		return err;
+
 	for (entry = *result; entry; entry = entry->next) {
 		if (entry->name) {
 			/* Do not try to switch to the root netns, as we're
@@ -367,7 +372,11 @@ int netns_list(struct netns_entry **result, int supported)
 			if ((err = netns_switch(entry)))
 				return err;
 		}
+		if ((err = sysfs_mount(entry->name)))
+			return err;
 		if ((err = if_list(&entry->ifaces, entry)))
+			return err;
+		if ((err = sysfs_umount()))
 			return err;
 	}
 	/* Walk all net name spaces again and gather all kernel assigned

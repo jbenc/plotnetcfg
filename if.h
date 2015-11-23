@@ -62,6 +62,9 @@ struct if_entry {
 	/* reverse fields needed by some frontends: */
 	struct if_list_entry *rev_master;
 	struct if_entry *rev_link;
+	char *pci_path;
+	char *pci_physfn;
+	struct if_entry *physfn;
 };
 
 #define IF_LOOPBACK	1
