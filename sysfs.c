@@ -42,6 +42,8 @@ void sysfs_clean()
 
 	if (S_ISDIR(st.st_mode))
 		sysfs_umount();
+
+	rmdir(sysfs_mountpoint);
 }
 
 int sysfs_init()
