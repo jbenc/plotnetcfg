@@ -32,6 +32,14 @@ int match_if_heur(struct if_entry **found,
 		  int (*callback)(struct if_entry *, void *),
 		  void *arg);
 
+/* Similar to match_if_heur, but returns first match.
+ */
+int match_if(struct if_entry **found,
+	     struct netns_entry *root, int all_ns,
+	     struct if_entry *self,
+	     int (*callback)(struct if_entry *, void *),
+	     void *arg);
+
 /* Find interface using netnsid. */
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 				  struct netns_entry *current);

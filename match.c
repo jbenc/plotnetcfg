@@ -54,6 +54,35 @@ int match_if_heur(struct if_entry **found,
 	return 0;
 }
 
+int match_if(struct if_entry **found,
+	     struct netns_entry *root, int all_ns,
+	     struct if_entry *self,
+	     int (*callback)(struct if_entry *, void *),
+	     void *arg)
+{
+	struct netns_entry *ns;
+	struct if_entry *entry;
+	int res;
+
+	for (ns = root; ns; ns = ns->next) {
+		for (entry = ns->ifaces; entry; entry = entry->next) {
+			if (entry == self)
+				continue;
+			res = callback(entry, arg);
+			if (res < 0)
+				return -res;
+			if (res > 0) {
+				*found = entry;
+				return 0;
+			}
+		}
+		if (!all_ns)
+			break;
+	}
+
+	*found = NULL;
+	return 0;
+}
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 				  struct netns_entry *current)
 {
