@@ -88,6 +88,10 @@ static void output_ifaces_pass2(struct if_entry *list)
 				printf(" [label=\"%s\"]", ptr->edge_label);
 			printf("\n");
 		}
+		if (ptr->physfn) {
+			printf("\"%s\" -> ", ifid(ptr));
+			printf("\"%s\" [style=dotted,taillabel=\"PF\"]\n", ifid(ptr->physfn));
+		}
 		if (ptr->link) {
 			printf("\"%s\" -> ", ifid(ptr->link));
 			printf("\"%s\"", ifid(ptr));

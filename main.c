@@ -33,6 +33,7 @@
 #include "handlers/openvswitch.h"
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
+#include "handlers/iov.h"
 
 static void register_frontends(void)
 {
@@ -48,6 +49,7 @@ static void register_handlers(void)
 	handler_veth_register();
 	handler_vlan_register();
 	handler_bridge_register();
+	handler_iov_register();
 }
 
 static int print_help(_unused char *arg)
