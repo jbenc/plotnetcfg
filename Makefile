@@ -10,7 +10,7 @@ CFLAGS=-W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 all: check-libs plotnetcfg
 
 plotnetcfg: args.o ethtool.o frontend.o handler.o if.o label.o main.o match.o netlink.o \
-	    netns.o tunnel.o utils.o \
+	    netns.o tunnel.o utils.o sysfs.o \
 	    handlers/bridge.o handlers/master.o handlers/openvswitch.o handlers/veth.o \
 	    handlers/vlan.o \
 	    frontends/dot.o frontends/json.o
