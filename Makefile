@@ -1,7 +1,7 @@
 ifeq ($(jansson),)
 libs=$(shell pkg-config --libs jansson)
 else
-libs=$(jansson)/src/.libs/libjansson.a
+libs=$(wildcard $(jansson)/src/.libs/libjansson.a $(jansson)/lib/libjansson.a)
 INCLUDE=-I$(jansson)/src
 endif
 
