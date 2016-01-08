@@ -83,6 +83,7 @@ int match_if(struct if_entry **found,
 	*found = NULL;
 	return 0;
 }
+
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 				  struct netns_entry *current)
 {
