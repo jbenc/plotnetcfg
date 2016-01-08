@@ -28,6 +28,7 @@
 #define LEN sizeof(PATH)
 
 static char sysfs_mountpoint[LEN];
+long page_size;
 
 void sysfs_clean()
 {
@@ -47,6 +48,8 @@ int sysfs_init()
 	strcpy(sysfs_mountpoint, PATH);
 	if (!mkdtemp(sysfs_mountpoint))
 		return errno;
+
+	page_size = sysconf(_SC_PAGESIZE);
 
 	atexit(sysfs_clean);
 	return 0;
@@ -78,6 +81,45 @@ char *sysfs_realpath(const char *sys_path)
 	free(path);
 
 	return resolved ? resolved + LEN : NULL;
+}
+
+ssize_t sysfs_readfile(char **dest, const char *sys_path)
+{
+	ssize_t ret;
+	char *path;
+	int fd;
+
+	*dest = NULL;
+
+	if (asprintf(&path, "%s/%s", sysfs_mountpoint, sys_path) < 0)
+		return -errno;
+
+	fd = open(path, O_RDONLY);
+	ret = -errno;
+	free(path);
+	if (fd < 0)
+		return ret;
+
+	*dest = malloc(page_size);
+	if (!*dest) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	ret = read(fd, *dest, page_size);
+	if (ret <= 0) {
+		ret = -errno;
+		free(*dest);
+		*dest = NULL;
+		goto err;
+	}
+
+	/* Strip the last newline, as we usually read one line only */
+	(*dest)[ret - 1] = '\0';
+
+err:
+	close(fd);
+	return ret;
 }
 
 void sysfs_free(char *path)

@@ -28,4 +28,9 @@ void sysfs_umount();
 char *sysfs_realpath(const char *sys_path);
 void sysfs_free(char *ptr);
 
+/*
+ * Reads file into allocated buffer, must be freed after use.
+ */
+ssize_t sysfs_readfile(char **dest, const char *sys_path);
+
 #endif

@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include "../handler.h"
+#include "../sysfs.h"
 #include "bridge.h"
 
 static int bridge_scan(struct if_entry *entry);
@@ -35,30 +36,23 @@ void handler_bridge_register(void)
 
 static int bridge_scan(struct if_entry *entry)
 {
-	int fd, res;
-	char buf[37 + IFNAMSIZ + 1];
+	int len;
+	char path [33 + IFNAMSIZ + 1];
+	char *ifindex;
 
 	if (entry->master_index)
 		return 0;
-	snprintf(buf, sizeof(buf), "/sys/class/net/%s/brport/bridge/ifindex", entry->if_name);
-	fd = open(buf, O_RDONLY);
-	if (fd < 0) {
-		if (errno == ENOENT)
+
+	snprintf(path, sizeof(path), "/class/net/%s/brport/bridge/ifindex", entry->if_name);
+
+	len = sysfs_readfile(&ifindex, path);
+	if (len < 0) {
+		if (len == -ENOENT)
 			return 0;
-		return errno;
+		return -len;
 	}
-	res = read(fd, buf, sizeof(buf));
-	if (res < 0) {
-		res = errno;
-		goto out;
-	}
-	if (res == 0) {
-		res = EINVAL;
-		goto out;
-	}
-	entry->master_index = atoi(buf);
-	res = 0;
-out:
-	close(fd);
-	return res;
+
+	entry->master_index = atoi(ifindex);
+	free(ifindex);
+	return 0;
 }
