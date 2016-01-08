@@ -49,6 +49,7 @@ struct if_entry {
 	struct label *label;
 	unsigned int master_index;
 	struct if_entry *master;
+	struct if_entry *active_slave;
 	unsigned int link_index;
 	int link_netnsid;
 	struct if_entry *link;
@@ -67,11 +68,12 @@ struct if_entry {
 	struct if_entry *physfn;
 };
 
-#define IF_LOOPBACK	1
-#define IF_UP		2
-#define IF_HAS_LINK	4
-#define IF_INTERNAL	8
-#define IF_PEER_WEAK	16
+#define IF_LOOPBACK		1
+#define IF_UP			2
+#define IF_HAS_LINK		4
+#define IF_INTERNAL		8
+#define IF_PEER_WEAK		16
+#define IF_PASSIVE_SLAVE	32
 
 int if_list(struct if_entry **result, struct netns_entry *ns);
 void if_list_free(struct if_entry *list);

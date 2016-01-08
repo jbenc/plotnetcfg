@@ -83,10 +83,11 @@ static void output_ifaces_pass2(struct if_entry *list)
 	for (ptr = list; ptr; ptr = ptr->next) {
 		if (ptr->master) {
 			printf("\"%s\" -> ", ifid(ptr));
-			printf("\"%s\"", ifid(ptr->master));
+			printf("\"%s\" [style=%s", ifid(ptr->master),
+			       ptr->flags & IF_PASSIVE_SLAVE ? "dashed" : "solid");
 			if (ptr->edge_label && !ptr->link)
-				printf(" [label=\"%s\"]", ptr->edge_label);
-			printf("\n");
+				printf(",label=\"%s\"", ptr->edge_label);
+			printf("]\n");
 		}
 		if (ptr->physfn) {
 			printf("\"%s\" -> ", ifid(ptr));
