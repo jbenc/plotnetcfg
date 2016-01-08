@@ -21,6 +21,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include "args.h"
+#include "master.h"
 #include "netns.h"
 #include "utils.h"
 #include "version.h"
@@ -29,7 +30,6 @@
 #include "frontends/json.h"
 #include "handler.h"
 #include "handlers/bridge.h"
-#include "handlers/master.h"
 #include "handlers/openvswitch.h"
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
@@ -44,7 +44,6 @@ static void register_frontends(void)
 
 static void register_handlers(void)
 {
-	handler_master_register();
 	handler_ovs_register();
 	handler_veth_register();
 	handler_vlan_register();

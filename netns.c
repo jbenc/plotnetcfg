@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include "handler.h"
 #include "if.h"
+#include "master.h"
 #include "match.h"
 #include "netlink.h"
 #include "utils.h"
@@ -331,18 +332,6 @@ static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *r
 	nl_close(&hnd);
 }
 
-static int netns_build_rev(struct netns_entry *root)
-{
-	struct netns_entry *entry;
-	int err;
-
-	for (entry = root; entry; entry = entry->next) {
-		if ((err = if_list_build_rev(entry->ifaces)))
-			return err;
-	}
-	return 0;
-}
-
 int netns_list(struct netns_entry **result, int supported)
 {
 	struct netns_entry *entry;
@@ -388,11 +377,11 @@ int netns_list(struct netns_entry **result, int supported)
 	/* And finally, resolve netnsid+ifindex to the if_entry pointers. */
 	match_all_netnsid(*result);
 
+	if ((err = master_resolve(*result)))
+		return err;
 	if ((err = global_handler_post(*result)))
 		return err;
 	if ((err = handler_post(*result)))
-		return err;
-	if ((err = netns_build_rev(*result)))
 		return err;
 	return 0;
 }

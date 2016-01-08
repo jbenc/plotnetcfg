@@ -30,6 +30,7 @@
 #include "../if.h"
 #include "../label.h"
 #include "../match.h"
+#include "../master.h"
 #include "../netlink.h"
 #include "../netns.h"
 #include "../tunnel.h"
@@ -602,7 +603,7 @@ static int link_ifaces(struct netns_entry *root)
 				port->link = create_iface(port->name, port->bridge->name, root);
 				if (!port->link)
 					return ENOMEM;
-				port->link->master = master;
+				master_set(master, port->link);
 				master = port->link;
 				label_port_or_iface(port, port->link);
 			}
@@ -618,7 +619,7 @@ static int link_ifaces(struct netns_entry *root)
 				}
 
 				/* reconnect to the ovs master */
-				iface->link->master = master;
+				master_set(master, iface->link);
 
 				label_iface(iface);
 				if (port->iface_count == 1)

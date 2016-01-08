@@ -7,8 +7,8 @@ endif
 
 CFLAGS=-W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 
-OBJECTS=args ethtool frontend handler if label main match netlink netns tunnel utils sysfs
-HANDLERS=bridge master openvswitch veth vlan iov
+OBJECTS=args ethtool frontend handler if label main match netlink netns tunnel utils sysfs master
+HANDLERS=bridge openvswitch veth vlan iov
 FRONTENDS=dot json
 
 OBJ=$(OBJECTS:%=%.o) $(HANDLERS:%=handlers/%.o) $(FRONTENDS:%=frontends/%.o)

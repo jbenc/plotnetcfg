@@ -1,6 +1,7 @@
 /*
  * This file is a part of plotnetcfg, a tool to visualize network config.
- * Copyright (C) 2014 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
+ * Copyright (C) 2016 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>,
+ *                                     Ondrej Hlavaty <ohlavaty@redhat.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,20 +18,47 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include "../handler.h"
-#include "../match.h"
-#include "../utils.h"
+#include <stdlib.h>
+#include "handler.h"
+#include "match.h"
+#include "utils.h"
 #include "master.h"
+#include "if.h"
 
-static int master_post(struct netns_entry *root);
-
-static struct global_handler h_master = {
-	.post = master_post,
-};
-
-void handler_master_register(void)
+int master_set(struct if_entry *master, struct if_entry *slave)
 {
-	global_handler_register(&h_master);
+	struct if_list_entry **le_ptr, *le;
+
+	le = NULL;
+	if (slave->master) {
+		for (le_ptr = &slave->master->rev_master; *le_ptr; le_ptr = &(*le_ptr)->next) {
+			le = *le_ptr;
+			if (le->entry == slave) {
+				*le_ptr = le->next;
+				break;
+			}
+		}
+		slave->master = NULL;
+	}
+
+	if (!master) {
+		if (le)
+			free(le);
+		return 0;
+	}
+
+	slave->master = master;
+
+	if (!le)
+		le = malloc(sizeof(*le));
+
+	if (!le)
+		return ENOMEM;
+
+	le->entry = slave;
+	le->next = master->rev_master;
+	master->rev_master = le;
+	return 0;
 }
 
 static int match_master(struct if_entry *entry, void *arg)
@@ -70,21 +98,26 @@ static int err_msg(int err, const char *type, struct if_entry *entry,
 static int process(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
+	struct if_entry *master;
 
 	if (entry->master_index) {
-		err = match_if_heur(&entry->master, root, 1, entry, match_master, entry);
-		if ((err = err_msg(err, "master", entry, entry->master)))
+		err = match_if_heur(&master, root, 1, entry, match_master, entry);
+		if ((err = err_msg(err, "master", entry, master)))
+			return err;
+		if ((err = master_set(master, entry)))
 			return err;
 	}
 	if (!entry->link && entry->link_index) {
 		err = match_if_heur(&entry->link, root, 1, entry, match_link, entry);
 		if ((err = err_msg(err, "link", entry, entry->link)))
 			return err;
+		if (entry->link)
+			entry->link->rev_link = entry;
 	}
 	return 0;
 }
 
-static int master_post(struct netns_entry *root)
+int master_resolve(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;

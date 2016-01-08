@@ -79,6 +79,5 @@ void if_list_free(struct if_entry *list);
 void if_append(struct if_entry **list, struct if_entry *item);
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...);
-int if_list_build_rev(struct if_entry *list);
 
 #endif

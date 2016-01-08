@@ -255,23 +255,3 @@ out:
 	va_end(ap);
 	return err;
 }
-
-int if_list_build_rev(struct if_entry *list)
-{
-	while (list) {
-		if (list->master) {
-			struct if_list_entry *le;
-
-			le = malloc(sizeof(*le));
-			if (!le)
-				return ENOMEM;
-			le->entry = list;
-			le->next = list->master->rev_master;
-			list->master->rev_master = le;
-		}
-		if (list->link)
-			list->link->rev_link = list->link;
-		list = list->next;
-	}
-	return 0;
-}
