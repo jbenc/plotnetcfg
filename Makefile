@@ -19,7 +19,7 @@ plotnetcfg: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $+ $(libs)
 
 Makefile.dep: version.h $(OBJ:.o=.c)
-	$(CC) -M $(CPPFLAGS) $(OBJ:.o=.c) | sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' >$@
+	$(CC) -M $(CFLAGS) $(OBJ:.o=.c) | sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' >$@
 
 -include Makefile.dep
 
