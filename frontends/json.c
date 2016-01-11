@@ -90,7 +90,7 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 static json_t *interfaces_to_array(struct if_entry *entry)
 {
 	struct if_list_entry *iflist;
-	json_t *ifarr, *ifobj, *children;
+	json_t *ifarr, *ifobj, *children, *parents;
 	char *s;
 
 	ifarr = json_array();
@@ -117,24 +117,29 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 		if (entry->warnings)
 			json_object_set_new(ifobj, "warning", json_true());
 
+		parents = json_array();
 		if (entry->master)
-			json_object_set_new(ifobj, "parent",
-					    connection(entry->master,
-						       entry->link ? NULL : entry->edge_label));
-		else if (entry->rev_link)
-			json_object_set_new(ifobj, "parent",
-					    connection(entry->rev_link, entry->rev_link->edge_label));
+			json_array_append_new(parents,
+					      connection(entry->master,
+						         entry->link ? NULL : entry->edge_label));
+		else
+			for (iflist = entry->rev_link; iflist; iflist = iflist->next)
+				json_array_append_new(parents,
+						      connection(iflist->entry,
+								 iflist->entry->edge_label));
+		if (json_array_size(parents))
+			json_object_set(ifobj, "parents", parents);
+		json_decref(parents);
 
 		children = json_array();
 		if (entry->link)
 			json_array_append_new(children, connection(entry->link, entry->edge_label));
-		if (entry->rev_master) {
+		else
 			for (iflist = entry->rev_master; iflist; iflist = iflist->next)
 				json_array_append_new(children,
 						      connection(iflist->entry,
 								 iflist->entry->link ? NULL :
 								 iflist->entry->edge_label));
-		}
 		if (json_array_size(children))
 			json_object_set(ifobj, "children", children);
 		json_decref(children);
@@ -156,7 +161,7 @@ static void json_output(struct netns_entry *root)
 
 	time(&cur);
 	output = json_object();
-	json_object_set_new(output, "format", json_integer(1));
+	json_object_set_new(output, "format", json_integer(2));
 	json_object_set_new(output, "version", json_string(VERSION));
 	json_object_set_new(output, "date", json_string(ctime(&cur)));
 	ns_list = json_array();

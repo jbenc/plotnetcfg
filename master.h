@@ -29,4 +29,9 @@ int master_resolve(struct netns_entry *root);
  */
 int master_set(struct if_entry *master, struct if_entry *slave);
 
+/*
+ * Sets entry->link to link and adds link->rev_link entry of entry
+ */
+int link_set(struct if_entry *link, struct if_entry *entry);
+
 #endif

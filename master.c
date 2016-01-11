@@ -19,35 +19,41 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include "handler.h"
 #include "match.h"
 #include "utils.h"
 #include "master.h"
 #include "if.h"
 
-int master_set(struct if_entry *master, struct if_entry *slave)
+#define memberof(ptr, offset, type) (*((type *) ((char *) (ptr) + (offset))))
+
+static int rev_set(struct if_entry *main, size_t rev_list_off, struct if_entry *other, size_t rel_off)
 {
 	struct if_list_entry **le_ptr, *le;
+	struct if_entry **old_main;
+	struct if_list_entry **old_list;
 
 	le = NULL;
-	if (slave->master) {
-		for (le_ptr = &slave->master->rev_master; *le_ptr; le_ptr = &(*le_ptr)->next) {
+	old_main = &memberof(other, rel_off, struct if_entry *);
+	if (*old_main) {
+		for (le_ptr = &memberof(*old_main, rev_list_off, struct if_list_entry *); *le_ptr; le_ptr = &(*le_ptr)->next) {
 			le = *le_ptr;
-			if (le->entry == slave) {
+			if (le->entry == other) {
 				*le_ptr = le->next;
 				break;
 			}
 		}
-		slave->master = NULL;
+		*old_main = NULL;
 	}
 
-	if (!master) {
+	if (!main) {
 		if (le)
 			free(le);
 		return 0;
 	}
 
-	slave->master = master;
+	*old_main = main;
 
 	if (!le)
 		le = malloc(sizeof(*le));
@@ -55,10 +61,23 @@ int master_set(struct if_entry *master, struct if_entry *slave)
 	if (!le)
 		return ENOMEM;
 
-	le->entry = slave;
-	le->next = master->rev_master;
-	master->rev_master = le;
+	le->entry = other;
+	old_list = &memberof(main, rev_list_off, struct if_list_entry *);
+	le->next = *old_list;
+	*old_list = le;
 	return 0;
+}
+
+int master_set(struct if_entry *master, struct if_entry *slave)
+{
+	return rev_set(master, offsetof(struct if_entry, rev_master),
+		       slave, offsetof(struct if_entry, master));
+}
+
+int link_set(struct if_entry *link, struct if_entry *entry)
+{
+	return rev_set(link, offsetof(struct if_entry, rev_link),
+		       entry, offsetof(struct if_entry, link));
 }
 
 static int match_master(struct if_entry *entry, void *arg)
@@ -98,9 +117,9 @@ static int err_msg(int err, const char *type, struct if_entry *entry,
 static int process(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
-	struct if_entry *master;
+	struct if_entry *master, *link;
 
-	if (entry->master_index) {
+	if (!entry->master && entry->master_index) {
 		err = match_if_heur(&master, root, 1, entry, match_master, entry);
 		if ((err = err_msg(err, "master", entry, master)))
 			return err;
@@ -108,11 +127,11 @@ static int process(struct if_entry *entry, struct netns_entry *root)
 			return err;
 	}
 	if (!entry->link && entry->link_index) {
-		err = match_if_heur(&entry->link, root, 1, entry, match_link, entry);
-		if ((err = err_msg(err, "link", entry, entry->link)))
+		err = match_if_heur(&link, root, 1, entry, match_link, entry);
+		if ((err = err_msg(err, "link", entry, link)))
 			return err;
-		if (entry->link)
-			entry->link->rev_link = entry;
+		if ((err = link_set(link, entry)))
+			return err;
 	}
 	return 0;
 }

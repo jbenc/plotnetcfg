@@ -62,7 +62,7 @@ struct if_entry {
 	int warnings;
 	/* reverse fields needed by some frontends: */
 	struct if_list_entry *rev_master;
-	struct if_entry *rev_link;
+	struct if_list_entry *rev_link;
 	char *pci_path;
 	char *pci_physfn_path;
 	struct if_entry *physfn;

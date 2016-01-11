@@ -8,7 +8,7 @@ plotnetcfg \- json output format
 .TP
 format
 .I (number)
-Currently 1. Will be increased if incompatible changes are introduced.
+Currently 2. Will be increased if incompatible changes are introduced.
 A tool parsing the json output should refuse any format it's not aware of.
 Note that adding of new fields is not considered to be an incompatible
 change.
@@ -130,10 +130,10 @@ representation of this interface as not having complete data available.
 Not present if there was no error.
 
 .TP
-parent
-.I (object)
-The parent interface, as a connection object. Not present if there's no
-parent.
+parents
+.I (array)
+Array of parent interfaces, as connection objects. Not present if there
+are no parents.
 
 .TP
 children
