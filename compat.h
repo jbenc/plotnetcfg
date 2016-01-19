@@ -53,6 +53,13 @@ struct ovs_header {
 	int dp_ifindex;
 };
 
+#define IFLA_VXLAN_COLLECT_METADATA	25
+
+#if IFLA_VXLAN_MAX < IFLA_VXLAN_COLLECT_METADATA
+#undef IFLA_VXLAN_MAX
+#define IFLA_VXLAN_MAX IFLA_VXLAN_COLLECT_METADATA
+#endif
+
 #ifndef IFLA_BOND_MAX
 enum {
 	IFLA_BOND_UNSPEC,
