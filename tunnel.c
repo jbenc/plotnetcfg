@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include "handler.h"
+#include "addr.h"
 #include "if.h"
 #include "match.h"
 #include "netns.h"
@@ -48,7 +49,7 @@ struct if_entry *tunnel_find_iface(struct netns_entry *ns, const char *addr)
 	struct search_arg data;
 	struct if_entry *result;
 
-	data.af = raw_addr(data.raw, addr);
+	data.af = addr_parse_raw(data.raw, addr);
 	if (data.af < 0)
 		return NULL;
 	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, &data))

@@ -16,15 +16,10 @@
 #ifndef _IF_H
 #define _IF_H
 
+#include "addr.h"
+
 struct netns_entry;
 struct label;
-
-struct addr {
-	int family;
-	int prefixlen;
-	char *formatted;
-	void *raw;
-};
 
 struct if_addr_entry {
 	struct if_addr_entry *next;

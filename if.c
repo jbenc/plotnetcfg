@@ -72,29 +72,6 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	handler_netlink(dest, tb);
 }
 
-static int store_addr(struct addr *dest, const struct ifaddrmsg *ifa,
-		      const struct rtattr *rta)
-{
-	char buf[64];
-	unsigned int len = RTA_PAYLOAD(rta);
-
-	dest->family = ifa->ifa_family;
-	dest->prefixlen = ifa->ifa_prefixlen;
-	dest->raw = malloc(len);
-	if (!dest->raw)
-		return ENOMEM;
-	memcpy(dest->raw, RTA_DATA(rta), len);
-
-	if (!inet_ntop(ifa->ifa_family, RTA_DATA(rta), buf, sizeof(buf)))
-		return errno;
-	len = strlen(buf);
-	snprintf(buf + len, sizeof(buf) - len, "/%d", ifa->ifa_prefixlen);
-	dest->formatted = strdup(buf);
-	if (!dest->formatted)
-		return ENOMEM;
-	return 0;
-}
-
 static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 {
 	struct if_addr_entry *entry, *ptr = NULL;
@@ -130,12 +107,12 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 			rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
 			rta_tb[IFA_ADDRESS] = NULL;
 		}
-		if ((err = store_addr(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
+		if ((err = addr_init_netlink(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
 			return err;
 		if (rta_tb[IFA_ADDRESS] &&
 		    memcmp(RTA_DATA(rta_tb[IFA_ADDRESS]), RTA_DATA(rta_tb[IFA_LOCAL]),
 			   ifa->ifa_family == AF_INET ? 4 : 16)) {
-			if ((err = store_addr(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
+			if ((err = addr_init_netlink(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
 				return err;
 		}
 
@@ -203,10 +180,8 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 
 static void if_addr_destruct(struct if_addr_entry *entry)
 {
-	free(entry->addr.raw);
-	free(entry->addr.formatted);
-	free(entry->peer.raw);
-	free(entry->peer.formatted);
+	addr_destruct(&entry->addr);
+	addr_destruct(&entry->peer);
 }
 
 static void if_list_destruct(struct if_entry *entry)

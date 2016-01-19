@@ -69,16 +69,3 @@ char *ifid(struct if_entry *entry)
 			 ns, entry->if_name);
 	return buf;
 }
-
-int raw_addr(void *dst, const char *src)
-{
-	int af;
-
-	if (strchr(src, ':'))
-		af = AF_INET6;
-	else
-		af = AF_INET;
-	if (inet_pton(af, src, dst) <= 0)
-		return -1;
-	return af;
-}
