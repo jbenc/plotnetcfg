@@ -545,7 +545,7 @@ static void link_vxlan(struct ovs_if *iface)
 {
 	if (!iface->local_ip || !*iface->local_ip)
 		return;
-	link_set(tunnel_find_iface(iface->link->ns, iface->local_ip), iface->link);
+	link_set(tunnel_find_str(iface->link->ns, iface->local_ip), iface->link);
 	iface->link->flags |= IF_LINK_WEAK;
 }
 

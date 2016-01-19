@@ -23,36 +23,42 @@
 #include "utils.h"
 #include "tunnel.h"
 
-struct search_arg {
-	int af;
-	char raw[16];
-};
-
 static int match_tunnel(struct if_entry *entry, void *arg)
 {
-	struct search_arg *data = arg;
+	struct addr *data = arg;
 	struct if_addr_entry *addr;
 
 	if (!(entry->flags & IF_UP))
 		return 0;
 	for (addr = entry->addr; addr; addr = addr->next) {
-		if (addr->addr.family != data->af)
+		if (addr->addr.family != data->family)
 			continue;
-		if (!memcmp(addr->addr.raw, data->raw, data->af == AF_INET ? 4 : 16))
+		if (!memcmp(addr->addr.raw, data->raw, data->family == AF_INET ? 4 : 16))
 			return 1;
 	}
 	return 0;
 }
 
-struct if_entry *tunnel_find_iface(struct netns_entry *ns, const char *addr)
+struct if_entry *tunnel_find_str(struct netns_entry *ns, const char *addr)
 {
-	struct search_arg data;
+	struct addr data;
+	char buf [16];
 	struct if_entry *result;
 
-	data.af = addr_parse_raw(data.raw, addr);
-	if (data.af < 0)
+	data.raw = buf;
+	data.family = addr_parse_raw(data.raw, addr);
+	if (data.family < 0)
 		return NULL;
 	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, &data))
+		return NULL;
+	return result;
+}
+
+struct if_entry *tunnel_find_addr(struct netns_entry *ns, struct addr *addr)
+{
+	struct if_entry *result;
+
+	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, addr))
 		return NULL;
 	return result;
 }

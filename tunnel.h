@@ -19,6 +19,7 @@
 struct if_entry;
 struct netns_entry;
 
-struct if_entry *tunnel_find_iface(struct netns_entry *ns, const char *addr);
+struct if_entry *tunnel_find_str(struct netns_entry *ns, const char *addr);
+struct if_entry *tunnel_find_addr(struct netns_entry *ns, struct addr *addr);
 
 #endif
