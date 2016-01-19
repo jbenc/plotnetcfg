@@ -35,6 +35,7 @@
 #include "handlers/vlan.h"
 #include "handlers/iov.h"
 #include "handlers/bond.h"
+#include "handlers/team.h"
 
 static void register_frontends(void)
 {
@@ -51,6 +52,7 @@ static void register_handlers(void)
 	handler_bridge_register();
 	handler_iov_register();
 	handler_bond_register();
+	handler_team_register();
 }
 
 static int print_help(_unused char *arg)
