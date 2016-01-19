@@ -95,17 +95,15 @@ static void output_ifaces_pass2(struct if_entry *list)
 		}
 		if (ptr->link) {
 			printf("\"%s\" -> ", ifid(ptr->link));
-			printf("\"%s\"", ifid(ptr));
+			printf("\"%s\" [style=%s", ifid(ptr),
+				ptr->flags & IF_LINK_WEAK ? "dashed" : "solid");
 			if (ptr->edge_label)
-				printf(" [label=\"%s\"]", ptr->edge_label);
-			printf("\n");
+				printf(",label=\"%s\"", ptr->edge_label);
+			printf("]\n");
 		}
-		if (ptr->peer &&
-		    (((unsigned long)ptr > (unsigned long)ptr->peer) ||
-		     !ptr->peer->peer)) {
+		if (ptr->peer && (size_t) ptr > (size_t) ptr->peer) {
 			printf("\"%s\" -> ", ifid(ptr));
-			printf("\"%s\" [dir=none%s]\n", ifid(ptr->peer),
-			       ptr->flags & IF_PEER_WEAK ? ",style=dotted" : "");
+			printf("\"%s\" [dir=none]\n", ifid(ptr->peer));
 		}
 	}
 }

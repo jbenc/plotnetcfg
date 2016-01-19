@@ -80,6 +80,18 @@ int link_set(struct if_entry *link, struct if_entry *entry)
 		       entry, offsetof(struct if_entry, link));
 }
 
+int peer_set(struct if_entry *first, struct if_entry *second)
+{
+	if (first->peer)
+		first->peer->peer = NULL;
+	if (second->peer)
+		second->peer->peer = NULL;
+
+	first->peer = second;
+	second->peer = first;
+	return 0;
+}
+
 static int match_master(struct if_entry *entry, void *arg)
 {
 	struct if_entry *slave = arg;

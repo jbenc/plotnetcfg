@@ -545,8 +545,8 @@ static void link_vxlan(struct ovs_if *iface)
 {
 	if (!iface->local_ip || !*iface->local_ip)
 		return;
-	iface->link->peer = tunnel_find_iface(iface->link->ns, iface->local_ip);
-	iface->link->flags |= IF_PEER_WEAK;
+	link_set(tunnel_find_iface(iface->link->ns, iface->local_ip), iface->link);
+	iface->link->flags |= IF_LINK_WEAK;
 }
 
 static int link_patch_search(struct if_entry *entry, void *arg)
@@ -563,14 +563,16 @@ static int link_patch_search(struct if_entry *entry, void *arg)
 static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 {
 	int err;
+	struct if_entry *peer;
 
-	err = match_if_heur(&iface->link->peer, root, 1, NULL, link_patch_search, iface);
+	err = match_if_heur(&peer, root, 1, NULL, link_patch_search, iface);
 	if (err > 0)
 		return err;
 	if (err < 0)
 		return if_add_warning(iface->link, "failed to find openvswitch patch port peer reliably");
-	if (iface->link->peer)
-		iface->link->peer->peer = iface->link;
+
+	if (peer)
+		peer_set(iface->link, peer);
 	/* Ignore case when the peer is not found, it will be found from the
 	 * other side. */
 	return 0;

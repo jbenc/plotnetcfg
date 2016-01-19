@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include "netns.h"
 #include "if.h"
+#include "master.h"
 #include "match.h"
 
 int match_if_heur(struct if_entry **found,
@@ -110,13 +111,13 @@ void match_all_netnsid(struct netns_entry *root)
 	for (ns = root; ns; ns = ns->next) {
 		for (entry = ns->ifaces; entry; entry = entry->next) {
 			if (entry->link_netnsid >= 0)
-				entry->link = match_if_netnsid(entry->link_index,
-							       entry->link_netnsid,
-							       ns);
+				link_set(match_if_netnsid(entry->link_index,
+							  entry->link_netnsid,
+							  ns), entry);
 			if (entry->peer_netnsid >= 0)
-				entry->peer = match_if_netnsid(entry->peer_index,
-							       entry->peer_netnsid,
-							       ns);
+				peer_set(entry, match_if_netnsid(entry->peer_index,
+								 entry->peer_netnsid,
+								 ns));
 		}
 	}
 }

@@ -34,4 +34,9 @@ int master_set(struct if_entry *master, struct if_entry *slave);
  */
 int link_set(struct if_entry *link, struct if_entry *entry);
 
+/*
+ * Sets both entries peer to each other. Previous peers will have their peer set to NULL.
+ */
+int peer_set(struct if_entry *link, struct if_entry *entry);
+
 #endif

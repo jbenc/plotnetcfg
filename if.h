@@ -67,7 +67,7 @@ struct if_entry {
 #define IF_UP			2
 #define IF_HAS_LINK		4
 #define IF_INTERNAL		8
-#define IF_PEER_WEAK		16
+#define IF_LINK_WEAK		16
 #define IF_PASSIVE_SLAVE	32
 
 int if_list(struct if_entry **result, struct netns_entry *ns);
