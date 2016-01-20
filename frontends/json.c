@@ -153,7 +153,7 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 	return ifarr;
 }
 
-static void json_output(struct netns_entry *root)
+static void json_output(FILE *f, struct netns_entry *root)
 {
 	struct netns_entry *entry;
 	json_t *output, *ns_list, *ns;
@@ -174,7 +174,7 @@ static void json_output(struct netns_entry *root)
 		json_array_append_new(ns_list, ns);
 	}
 	json_object_set_new(output, "namespaces", ns_list);
-	json_dumpf(output, stdout, 0);
+	json_dumpf(output, f, 0);
 	json_decref(output);
 }
 

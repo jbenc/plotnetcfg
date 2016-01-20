@@ -128,6 +128,7 @@ int main(int argc, char **argv)
 	}
 	global_handler_cleanup(root);
 	netns_list_free(root);
+	frontend_cleanup();
 
 	return 0;
 }

@@ -51,7 +51,14 @@ usage.
 \fB-f\fr, \fB--format\fR=\fIFORMAT\fR
 Set output format. When not specified,
 .B dot
-is used.
+is used. Can be specified multiple times with
+.B --output.
+.TP
+\fB-o\fr, \fB--output\fR=\fIFILE\fR
+Send output to
+.I FILE
+in the last format preceding this option. Can be specified multiple times. When
+no format is given, send output to standard output.
 .TP
 \fB-F\fr, \fB--list-formats\fR
 Print available output formats.
@@ -78,6 +85,14 @@ Save network configuration to a file for later analysis:
 .B plotnetcfg >
 .I file
 .RE
+
+More complex output setting:
+.RS
+.BI "plotnetcfg -f json -o " "json1.js" " -o " "json2.js" " -f dot -o " "dot1.gv"
+.B -o - | dot -Tpdf >
+.I network.pdf
+.RE
+
 
 Create PDF with network configuration of a remote machine:
 .RS

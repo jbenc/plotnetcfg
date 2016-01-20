@@ -21,11 +21,12 @@ struct frontend {
 	struct frontend *next;
 	const char *format;
 	const char *desc;
-	void (*output)(struct netns_entry *root);
+	void (*output)(FILE *file, struct netns_entry *root);
 };
 
 void frontend_init(void);
 void frontend_register(struct frontend *f);
 int frontend_output(struct netns_entry *root);
+void frontend_cleanup(void);
 
 #endif
