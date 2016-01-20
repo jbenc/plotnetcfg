@@ -27,14 +27,21 @@
  * by setting driver to NULL. Generic handlers are not allowed to use
  * handler_private field in struct if_entry.
  *
- * The scan callback is called during interface scanning. Only actions
- * related to the passed single interface may be performed.
- * The post callback is called after all interfaces are scanned.
- * Inter-interface analysis is possible at this step.
+ * If you want to use handler_private, private_size bytes will be allocated
+ * before any callback is called.
+ *
+ * Callbacks are called in this order:
+ *   1. netlink - while reading interface data from netlink
+ *   2. scan - while scanning interfaces, sysfs is mounted
+ *   3. post - all interfaces are scanned, use this for inter-interface
+ *      scanning
+ *   4. cleanup - destroy private structure. handler_private itself will be
+ *      freed automatically.
  */
 struct handler {
 	struct handler *next;
 	const char *driver;
+	size_t private_size;
 	int (*netlink)(struct if_entry *entry, struct rtattr **tb);
 	int (*scan)(struct if_entry *entry);
 	int (*post)(struct if_entry *entry, struct netns_entry *root);
@@ -42,13 +49,11 @@ struct handler {
 };
 
 void handler_register(struct handler *h);
+int handler_init(struct if_entry *entry);
 int handler_netlink(struct if_entry *entry, struct rtattr **tb);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
 void handler_cleanup(struct if_entry *entry);
-
-/* For use as a callback. It calls free() on handler_private. */
-void handler_generic_cleanup(struct if_entry *entry);
 
 struct global_handler {
 	struct global_handler *next;

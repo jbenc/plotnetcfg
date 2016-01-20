@@ -25,16 +25,16 @@
 #include "../netlink.h"
 #include "vlan.h"
 
+struct vlan_private {
+	unsigned int tag;
+};
+
 static int vlan_netlink(struct if_entry *entry, struct rtattr **tb);
 
 static struct handler h_vlan = {
 	.driver = "802.1Q VLAN Support",
+	.private_size = sizeof(struct vlan_private),
 	.netlink = vlan_netlink,
-	.cleanup = handler_generic_cleanup,
-};
-
-struct vlan_private {
-	unsigned int tag;
 };
 
 void handler_vlan_register(void)
@@ -44,14 +44,9 @@ void handler_vlan_register(void)
 
 static int vlan_netlink(struct if_entry *entry, struct rtattr **tb)
 {
-	struct vlan_private *priv;
+	struct vlan_private *priv = entry->handler_private;
 	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	struct rtattr *vlanattr[IFLA_VLAN_MAX + 1];
-
-	priv = calloc(sizeof(*priv), 1);
-	if (!priv)
-		return ENOMEM;
-	entry->handler_private = priv;
 
 	if (!tb[IFLA_LINKINFO])
 		return ENOENT;

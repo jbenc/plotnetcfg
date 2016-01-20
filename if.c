@@ -32,22 +32,25 @@
 
 #include "compat.h"
 
-static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
+static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 {
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr *tb[IFLA_MAX + 1];
 	int len = n->nlmsg_len;
+	int err;
 
 	if (n->nlmsg_type != RTM_NEWLINK)
-		return;
+		return ENOENT;
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 	if (len < 0)
-		return;
+		return ENOENT;
 	rtnl_parse(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 	if (tb[IFLA_IFNAME] == NULL)
-		return;
+		return ENOENT;
 	dest->if_index = ifi->ifi_index;
 	dest->if_name = strdup(RTA_DATA(tb[IFLA_IFNAME]));
+	if (!dest->if_name)
+		return ENOMEM;
 	if (ifi->ifi_flags & IFF_UP) {
 		dest->flags |= IF_UP;
 		if (ifi->ifi_flags & IFF_RUNNING)
@@ -68,8 +71,27 @@ static void fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		dest->flags |= IF_LOOPBACK;
 	} else
 		dest->driver = ethtool_driver(dest->if_name);
+	if (!dest->driver) {
+		err = ENOMEM;
+		goto err_name;
+	}
 
-	handler_netlink(dest, tb);
+	if ((err = handler_init(dest)))
+		goto err_driver;
+
+	if ((err = handler_netlink(dest, tb)))
+		if (err != ENOENT)
+			goto err_driver;
+
+	return 0;
+
+err_driver:
+	free(dest->driver);
+	dest->driver = NULL;
+err_name:
+	free(dest->if_name);
+	dest->if_name = NULL;
+	return err;
 }
 
 static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
@@ -160,7 +182,8 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 		if (!entry)
 			return ENOMEM;
 		entry->ns = ns;
-		fill_if_link(entry, &l->h);
+		if ((err = fill_if_link(entry, &l->h)))
+			return err;
 		if ((err = fill_if_addr(entry, ainfo)))
 			return err;
 		if ((err = handler_scan(entry)))

@@ -29,21 +29,20 @@
 
 #define VXLAN_DEFAULT_PORT 46354
 
-static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb);
-static int vxlan_post(struct if_entry *entry, struct netns_entry *root);
-static void vxlan_cleanup(struct if_entry *entry);
-
-static struct handler h_vxlan = {
-	.driver = "vxlan",
-	.netlink = vxlan_netlink,
-	.post = vxlan_post,
-	.cleanup = vxlan_cleanup,
-};
-
 struct vxlan_priv {
 	struct addr *local;
 	struct addr *group;
 	int flags;
+};
+
+static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb);
+static int vxlan_post(struct if_entry *entry, struct netns_entry *root);
+
+static struct handler h_vxlan = {
+	.driver = "vxlan",
+	.private_size = sizeof(struct vxlan_priv),
+	.netlink = vxlan_netlink,
+	.post = vxlan_post,
 };
 
 #define VXLAN_COLLECT_METADATA 1
@@ -151,9 +150,4 @@ static int vxlan_post(struct if_entry *entry, _unused struct netns_entry *root)
 	if (priv->group)
 		label_add(&entry->label, "to: %s", priv->group->formatted);
 	return 0;
-}
-
-static void vxlan_cleanup(struct if_entry *entry)
-{
-	free(entry->handler_private);
 }

@@ -40,6 +40,12 @@ static const char *bond_mode_name[] = {
 	"balance-alb",
 };
 
+struct bond_private {
+	uint8_t mode;
+	unsigned int active_slave_index;
+	char *active_slave_name;
+};
+
 static int bond_netlink(struct if_entry *entry, struct rtattr **tb);
 static int bond_scan(struct if_entry *entry);
 static int bond_post(struct if_entry *entry, struct netns_entry *root);
@@ -47,16 +53,11 @@ static void bond_cleanup(struct if_entry *entry);
 
 static struct handler h_bond = {
 	.driver = "bonding",
+	.private_size = sizeof(struct bond_private),
 	.netlink = bond_netlink,
 	.scan = bond_scan,
 	.post = bond_post,
 	.cleanup = bond_cleanup,
-};
-
-struct bond_private {
-	uint8_t mode;
-	unsigned int active_slave_index;
-	char *active_slave_name;
 };
 
 void handler_bond_register(void)
@@ -66,14 +67,9 @@ void handler_bond_register(void)
 
 static int bond_netlink(struct if_entry *entry, struct rtattr **tb)
 {
-	struct bond_private *priv;
+	struct bond_private *priv = entry->handler_private;
 	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	struct rtattr *bondinfo[IFLA_BOND_MAX + 1];
-
-	priv = calloc(sizeof(*priv), 1);
-	if (!priv)
-		return ENOMEM;
-	entry->handler_private = priv;
 
 	if (!tb[IFLA_LINKINFO])
 		return ENOENT;
@@ -176,9 +172,6 @@ static void bond_cleanup(struct if_entry *entry)
 {
 	struct bond_private *priv = entry->handler_private;
 
-	if (priv) {
-		if (priv->active_slave_name)
-			free(priv->active_slave_name);
-		free(entry->handler_private);
-	}
+	if (priv->active_slave_name)
+		free(priv->active_slave_name);
 }

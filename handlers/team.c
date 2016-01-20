@@ -38,20 +38,22 @@
 #define TEAMD_REPLY_TIMEOUT 5000
 #define TEAMD_REQ TEAMD_REQUEST_PREFIX "\nStateDump\n"
 
+struct team_priv {
+	json_t *active_port_name;
+};
+
 static int team_scan(struct if_entry *entry);
 static int team_post(struct if_entry *entry, struct netns_entry *root);
 static void team_cleanup(struct if_entry *entry);
 
 static struct handler h_team = {
 	.driver = "team",
+	.private_size = sizeof(struct team_priv),
 	.scan = team_scan,
 	.post = team_post,
 	.cleanup = team_cleanup
 };
 
-struct team_priv {
-	json_t *active_port_name;
-};
 
 void handler_team_register(void)
 {
@@ -264,10 +266,6 @@ static int team_scan(struct if_entry *entry)
 	int fd, err;
 	char *reply;
 
-	entry->handler_private = calloc(1, sizeof(struct team_priv));
-	if (!entry->handler_private)
-		return ENOMEM;
-
 	fd = team_connect(entry);
 	if (fd < 0) {
 		if_add_warning(entry, "Team: Failed to connect to teamd (%s)", strerror(-fd));
@@ -325,6 +323,4 @@ static void team_cleanup(struct if_entry *entry)
 
 	if (priv->active_port_name)
 		json_decref(priv->active_port_name);
-
-	free(entry->handler_private);
 }

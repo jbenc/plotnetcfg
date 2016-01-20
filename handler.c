@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "netns.h"
 #include "if.h"
 #include "handler.h"
@@ -65,6 +66,26 @@ static int driver_match(struct handler *h, struct if_entry *e)
 		}							\
 	}
 
+int handler_init(struct if_entry *entry)
+{
+	struct handler *ptr;
+
+	for (ptr = handlers; ptr; ptr = ptr->next) {
+		if (!ptr->driver || strcmp(ptr->driver, entry->driver))
+			continue;
+
+		if (ptr->private_size) {
+			entry->handler_private = calloc(1, ptr->private_size);
+			if (!entry->handler_private)
+				return ENOMEM;
+		}
+
+		break;
+	}
+
+	return 0;
+}
+
 int handler_netlink(struct if_entry *entry, struct rtattr **tb)
 {
 	int err = 0;
@@ -100,6 +121,9 @@ int handler_post(struct netns_entry *root)
 void handler_cleanup(struct if_entry *entry)
 {
 	handler_loop(cleanup, entry);
+
+	if (entry->handler_private)
+		free(entry->handler_private);
 }
 
 void handler_generic_cleanup(struct if_entry *entry)
