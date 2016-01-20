@@ -47,13 +47,13 @@ static void register_frontends(void)
 
 static void register_handlers(void)
 {
-	handler_ovs_register();
-	handler_veth_register();
-	handler_vlan_register();
+	handler_bond_register();
 	handler_bridge_register();
 	handler_iov_register();
-	handler_bond_register();
+	handler_ovs_register();
 	handler_team_register();
+	handler_veth_register();
+	handler_vlan_register();
 	handler_vxlan_register();
 }
 
