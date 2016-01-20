@@ -62,7 +62,7 @@ static int add_output(char *format)
 static int add_format(char *arg)
 {
 	if (used_default_format) {
-		fprintf(stderr, "Failed to parse arguments: --output must come after --format, if there's any.\n");
+		fprintf(stderr, "Failed to parse arguments: --output must come after --format.\n");
 		return EINVAL;
 	}
 
