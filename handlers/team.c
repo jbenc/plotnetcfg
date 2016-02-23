@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include <linux/un.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -29,6 +29,8 @@
 #include "../if.h"
 #include "../utils.h"
 #include "team.h"
+
+#include "../compat.h"
 
 #define TEAMD_REQUEST_PREFIX	"REQUEST"
 #define TEAMD_ERR_PREFIX	"REPLY_ERROR"

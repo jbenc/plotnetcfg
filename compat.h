@@ -16,6 +16,10 @@
 #ifndef _COMPAT_H
 #define _COMPAT_H
 
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX	108
+#endif
+
 #define IFLA_LINK_NETNSID	37
 
 #if IFLA_MAX < IFLA_LINK_NETNSID
@@ -53,6 +57,8 @@ struct ovs_header {
 	int dp_ifindex;
 };
 
+#define IFLA_VXLAN_GROUP6		16
+#define IFLA_VXLAN_LOCAL6		17
 #define IFLA_VXLAN_COLLECT_METADATA	25
 
 #if IFLA_VXLAN_MAX < IFLA_VXLAN_COLLECT_METADATA

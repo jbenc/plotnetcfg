@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include "../compat.h"
 #include "../handler.h"
