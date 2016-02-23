@@ -33,12 +33,13 @@ static void output_label(FILE *f, struct label *list)
 		fprintf(f, "\\n%s", ptr->text);
 }
 
-static void output_label_properties(FILE *f, struct label_property *list)
+static void output_label_properties(FILE *f, struct label_property *list, unsigned int prop_mask)
 {
 	struct label_property *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next)
-		fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
+		if (label_prop_match_mask(ptr->type, prop_mask))
+			fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
 }
 
 static void output_addresses(FILE *f, struct if_addr_entry *list)
@@ -58,7 +59,7 @@ static void output_mtu(FILE *f, struct if_entry *ptr)
 		fprintf(f, "\\nMTU %d", ptr->mtu);
 }
 
-static void output_ifaces_pass1(FILE *f, struct if_entry *list)
+static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int prop_mask)
 {
 	struct if_entry *ptr;
 
@@ -66,18 +67,22 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list)
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
-		output_label_properties(f, ptr->prop);
+		output_label_properties(f, ptr->prop, prop_mask);
 		output_mtu(f, ptr);
-		output_addresses(f, ptr->addr);
+		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask))
+			output_addresses(f, ptr->addr);
 		fprintf(f, "\"");
-		if (ptr->flags & IF_INTERNAL)
-			fprintf(f, ",style=dotted");
-		else if (!(ptr->flags & IF_UP))
-			fprintf(f, ",style=filled,fillcolor=\"grey\"");
-		else if (!(ptr->flags & IF_HAS_LINK))
-			fprintf(f, ",style=filled,fillcolor=\"pink\"");
-		else
-			fprintf(f, ",style=filled,fillcolor=\"darkolivegreen1\"");
+
+		if (label_prop_match_mask(IF_PROP_STATE, prop_mask)) {
+			if (ptr->flags & IF_INTERNAL)
+				fprintf(f, ",style=dotted");
+			else if (!(ptr->flags & IF_UP))
+				fprintf(f, ",style=filled,fillcolor=\"grey\"");
+			else if (!(ptr->flags & IF_HAS_LINK))
+				fprintf(f, ",style=filled,fillcolor=\"pink\"");
+			else
+				fprintf(f, ",style=filled,fillcolor=\"darkolivegreen1\"");
+		}
 		if (ptr->warnings)
 			fprintf(f, ",color=\"red\"");
 		fprintf(f, "]\n");
@@ -135,7 +140,7 @@ static void output_warnings(FILE *f, struct netns_entry *root)
 	}
 }
 
-static void dot_output(FILE *f, struct netns_entry *root)
+static void dot_output(FILE *f, struct netns_entry *root, struct output_entry *output_entry)
 {
 	struct netns_entry *ns;
 	time_t cur;
@@ -149,7 +154,7 @@ static void dot_output(FILE *f, struct netns_entry *root)
 			fprintf(f, "label=\"%s\"\n", ns->name);
 			fprintf(f, "fontcolor=\"black\"\n");
 		}
-		output_ifaces_pass1(f, ns->ifaces);
+		output_ifaces_pass1(f, ns->ifaces, output_entry->print_mask);
 		if (ns->name)
 			fprintf(f, "}\n");
 	}

@@ -37,13 +37,14 @@ static json_t *label_to_array(struct label *entry)
 	return arr;
 }
 
-static json_t *label_properties_to_object(struct label_property *prop)
+static json_t *label_properties_to_object(struct label_property *prop, unsigned int prop_mask)
 {
 	json_t *jobj;
 
 	jobj = json_object();
 	while (prop) {
-		json_object_set_new(jobj, prop->key, json_string(prop->value));
+		if (label_prop_match_mask(prop->type, prop_mask))
+			json_object_set_new(jobj, prop->key, json_string(prop->value));
 		prop = prop->next;
 	}
 	return jobj;
@@ -100,7 +101,7 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 	return obj;
 }
 
-static json_t *interfaces_to_array(struct if_entry *entry)
+static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *output_entry)
 {
 	struct if_list_entry *iflist;
 	json_t *ifarr, *ifobj, *children, *parents, *jconn;
@@ -113,9 +114,11 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
 		json_object_set_new(ifobj, "name", json_string(entry->if_name));
 		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
-		json_object_set_new(ifobj, "info", label_properties_to_object(entry->prop));
-		json_object_set_new(ifobj, "addresses", addresses_to_array(entry->addr));
-		json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
+		json_object_set_new(ifobj, "info", label_properties_to_object(entry->prop, output_entry->print_mask));
+		if (label_prop_match_mask(IF_PROP_CONFIG, output_entry->print_mask)) {
+			json_object_set_new(ifobj, "addresses", addresses_to_array(entry->addr));
+			json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
+		}
 		json_object_set_new(ifobj, "type", json_string(entry->flags & IF_INTERNAL ?
 							       "internal" :
 							       "device"));
@@ -127,7 +130,8 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 			s = "up_no_link";
 		else
 			s = "up";
-		json_object_set_new(ifobj, "state", json_string(s));
+		if (label_prop_match_mask(IF_PROP_STATE, output_entry->print_mask))
+			json_object_set_new(ifobj, "state", json_string(s));
 		if (entry->warnings)
 			json_object_set_new(ifobj, "warning", json_true());
 
@@ -169,7 +173,7 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 	return ifarr;
 }
 
-static void json_output(FILE *f, struct netns_entry *root)
+static void json_output(FILE *f, struct netns_entry *root, struct output_entry *output_entry)
 {
 	struct netns_entry *entry;
 	json_t *output, *ns_list, *ns;
@@ -186,7 +190,7 @@ static void json_output(FILE *f, struct netns_entry *root)
 		ns = json_object();
 		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
-		json_object_set_new(ns, "interfaces", interfaces_to_array(entry->ifaces));
+		json_object_set_new(ns, "interfaces", interfaces_to_array(entry->ifaces, output_entry));
 		if (entry->warnings)
 			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));
 		json_object_set_new(ns_list, nsid(entry), ns);

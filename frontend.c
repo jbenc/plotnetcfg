@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "args.h"
+#include "if.h"
 #include "utils.h"
 #include "frontend.h"
 
@@ -25,16 +26,11 @@ static struct frontend *frontends = NULL;
 static struct frontend *frontends_tail = NULL;
 static int used_default_format = 0;
 
-struct output_entry {
-	struct output_entry *next;
-	char *format, *file;
-	struct frontend *frontend;
-};
-
 static struct output_entry default_output = {
 	.next = NULL,
 	.format = "dot",
 	.file = NULL,
+	.print_mask = -1U,
 };
 
 static struct output_entry *output = NULL;
@@ -43,9 +39,11 @@ static int add_output(char *format)
 {
 	struct output_entry *out;
 
-	out = calloc(1, sizeof(struct output_entry));
+	out = malloc(sizeof(struct output_entry));
 	if (!out)
 		return ENOMEM;
+
+	*out = default_output;
 
 	out->format = strdup(format);
 	if (!out->format) {
@@ -62,23 +60,32 @@ static int add_output(char *format)
 static int add_format(char *arg)
 {
 	if (used_default_format) {
-		fprintf(stderr, "Failed to parse arguments: --output must come after --format.\n");
+		fprintf(stderr, "Failed to parse arguments: output options must come after --format.\n");
 		return EINVAL;
 	}
 
 	return add_output(arg);
 }
 
-static int set_output(char *arg)
+static int require_format()
 {
 	int err;
 
-	/* No --format yet: create default */
 	if (!output) {
 		if ((err = add_output(default_output.format)))
 			return err;
 		used_default_format = 1;
 	}
+
+	return 0;
+}
+
+static int set_output(char *arg)
+{
+	int err;
+
+	if ((err = require_format()))
+		return err;
 
 	/* Multiple --outputs for one --format: clone last output */
 	if (output->file && (err = add_output(output->format)))
@@ -88,6 +95,17 @@ static int set_output(char *arg)
 	if (!output->file)
 		return ENOMEM;
 
+	return 0;
+}
+
+static int set_nostate()
+{
+	int err;
+
+	if ((err = require_format()))
+		return err;
+
+	output->print_mask &= ~IF_PROP_STATE;
 	return 0;
 }
 
@@ -109,6 +127,10 @@ static struct arg_option options[] = {
 	{ .long_name = "output", .short_name = 'o', .has_arg = 1,
 	  .type = ARG_CALLBACK, .action.callback = set_output,
 	  .help = "output file (default: standart output)",
+	},
+	{ .long_name = "config-only", .short_name = 'C', .has_arg = 0,
+	  .type = ARG_CALLBACK, .action.callback = set_nostate,
+	  .help = "skip state in output, print only configuration",
 	},
 	{ .long_name = "list-formats", .short_name = 'F',
 	  .type = ARG_CALLBACK, .action.callback = print_formats,
@@ -159,7 +181,7 @@ int frontend_output(struct netns_entry *root)
 		} else
 			file = stdout;
 
-		out->frontend->output(file, root);
+		out->frontend->output(file, root, out);
 
 		if (file != stdout && fclose(file))
 			return errno;

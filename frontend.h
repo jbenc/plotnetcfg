@@ -17,11 +17,18 @@
 #define _FRONTEND_H
 #include "netns.h"
 
+struct output_entry {
+	struct output_entry *next;
+	char *format, *file;
+	struct frontend *frontend;
+	unsigned int print_mask;
+};
+
 struct frontend {
 	struct frontend *next;
 	const char *format;
 	const char *desc;
-	void (*output)(FILE *file, struct netns_entry *root);
+	void (*output)(FILE *file, struct netns_entry *root, struct output_entry *output_entry);
 };
 
 void frontend_init(void);

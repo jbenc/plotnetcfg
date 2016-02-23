@@ -53,12 +53,19 @@ Set output format. When not specified,
 .B dot
 is used. Can be specified multiple times with
 .B --output.
+Order in which multiple outputs are processed is undefined. All the outputs
+contain the same snapshot of network configuration state.
 .TP
 \fB-o\fr, \fB--output\fR=\fIFILE\fR
 Send output to
 .I FILE
 in the last format preceding this option. Can be specified multiple times. When
-no format is given, send output to standard output.
+no file is given, send output to standard output. Every \fB--output\fR starts
+a new output file, for which output specific options apply.
+.TP
+\fB-C\fr, \fB--config-only\fR
+Output specific. Prints just configuration of the network topology, no state
+information.
 .TP
 \fB-F\fr, \fB--list-formats\fR
 Print available output formats.
@@ -88,7 +95,7 @@ Save network configuration to a file for later analysis:
 
 More complex output setting:
 .RS
-.BI "plotnetcfg -f json -o " "json1.js" " -o " "json2.js" " -f dot -o " "dot1.gv"
+.BI "plotnetcfg -f json -o " "json.js" " -o " "json-config.js" " --config-only -f dot -o " "dot1.gv"
 .B -o - | dot -Tpdf >
 .I network.pdf
 .RE
