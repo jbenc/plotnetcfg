@@ -37,6 +37,18 @@ static json_t *label_to_array(struct label *entry)
 	return arr;
 }
 
+static json_t *label_properties_to_object(struct label_property *prop)
+{
+	json_t *jobj;
+
+	jobj = json_object();
+	while (prop) {
+		json_object_set_new(jobj, prop->key, json_string(prop->value));
+		prop = prop->next;
+	}
+	return jobj;
+}
+
 static json_t *address_to_obj(struct addr *addr)
 {
 	json_t *obj;
@@ -80,6 +92,7 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 
 	obj = json_object();
 	json_object_set_new(obj, "target", json_string(ifid(target)));
+
 	arr = json_array();
 	if (edge_label)
 		json_array_append_new(arr, json_string(edge_label));
@@ -100,7 +113,7 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
 		json_object_set_new(ifobj, "name", json_string(entry->if_name));
 		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
-		json_object_set_new(ifobj, "info", label_to_array(entry->label));
+		json_object_set_new(ifobj, "info", label_properties_to_object(entry->prop));
 		json_object_set_new(ifobj, "addresses", addresses_to_array(entry->addr));
 		json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
 		json_object_set_new(ifobj, "type", json_string(entry->flags & IF_INTERNAL ?

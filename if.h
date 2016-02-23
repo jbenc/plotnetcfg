@@ -41,7 +41,7 @@ struct if_entry {
 	int mtu;
 	char *if_name;
 	char *driver;
-	struct label *label;
+	struct label_property *prop;
 	unsigned int master_index;
 	struct if_entry *master;
 	struct if_entry *active_slave;
@@ -76,5 +76,11 @@ void if_list_free(struct if_entry *list);
 void if_append(struct if_entry **list, struct if_entry *item);
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...);
+
+#define IF_PROP_STATE	1
+#define IF_PROP_CONFIG	2
+
+#define if_add_state(entry, key, fmt, ...) label_add_property(&(entry)->prop, IF_PROP_STATE, key, fmt, ##__VA_ARGS__)
+#define if_add_config(entry, key, fmt, ...) label_add_property(&(entry)->prop, IF_PROP_CONFIG, key, fmt, ##__VA_ARGS__)
 
 #endif

@@ -153,13 +153,13 @@ static int bond_post(struct if_entry *entry, _unused struct netns_entry *root)
 	struct if_list_entry *ile;
 
 	if (priv->mode && *bond_mode_name[priv->mode])
-		label_add(&entry->label, "mode: %s", bond_mode_name[priv->mode]);
+		if_add_config(entry, "mode", "%s", bond_mode_name[priv->mode]);
 
 	if (priv->active_slave_index || priv->active_slave_name) {
 		for (ile = entry->rev_master; ile; ile = ile->next) {
 			if (match_active_slave(ile->entry, entry)) {
 				entry->active_slave = ile->entry;
-				label_add(&entry->label, "active slave: %s", entry->active_slave->if_name);
+				if_add_state(entry, "active slave", "%s", entry->active_slave->if_name);
 			} else {
 				ile->entry->flags |= IF_PASSIVE_SLAVE;
 			}

@@ -33,6 +33,14 @@ static void output_label(FILE *f, struct label *list)
 		fprintf(f, "\\n%s", ptr->text);
 }
 
+static void output_label_properties(FILE *f, struct label_property *list)
+{
+	struct label_property *ptr;
+
+	for (ptr = list; ptr; ptr = ptr->next)
+		fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
+}
+
 static void output_addresses(FILE *f, struct if_addr_entry *list)
 {
 	struct if_addr_entry *ptr;
@@ -58,7 +66,7 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list)
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
-		output_label(f, ptr->label);
+		output_label_properties(f, ptr->prop);
 		output_mtu(f, ptr);
 		output_addresses(f, ptr->addr);
 		fprintf(f, "\"");
@@ -137,7 +145,7 @@ static void dot_output(FILE *f, struct netns_entry *root)
 	fprintf(f, "digraph {\nnode [shape=box]\n");
 	for (ns = root; ns; ns = ns->next) {
 		if (ns->name) {
-			fprintf(f, "subgraph \"cluster_%s\" {\n", ns->name);
+			fprintf(f, "subgraph \"cluster/%s\" {\n", nsid(ns));
 			fprintf(f, "label=\"%s\"\n", ns->name);
 			fprintf(f, "fontcolor=\"black\"\n");
 		}

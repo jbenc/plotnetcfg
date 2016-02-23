@@ -21,7 +21,18 @@ struct label {
 	char *text;
 };
 
+struct label_property {
+	struct label_property *next;
+	int type;
+	char *key, *value;
+};
+
 int label_add(struct label **list, char *fmt, ...);
 void label_free(struct label *list);
+
+int label_add_property(struct label_property **list, int type,
+		       const char *key, const char *fmt, ...);
+void label_free_property(struct label_property *list);
+#define label_prop_match_mask(type, mask) (((type) & (mask)) > 0)
 
 #endif

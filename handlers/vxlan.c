@@ -101,12 +101,12 @@ static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb)
 	rtnl_parse_nested(vxlaninfo, IFLA_VXLAN_MAX, linkinfo[IFLA_INFO_DATA]);
 
 	if (vxlaninfo[IFLA_VXLAN_ID])
-		label_add(&entry->label, "VNI: %u", *(uint32_t *)RTA_DATA(vxlaninfo[IFLA_VXLAN_ID]));
+		if_add_config(entry, "VNI", "%u", *(uint32_t *)RTA_DATA(vxlaninfo[IFLA_VXLAN_ID]));
 
 	if (vxlaninfo[IFLA_VXLAN_PORT]) {
 		port = *(uint16_t *)RTA_DATA(vxlaninfo[IFLA_VXLAN_PORT]);
 		if (port != VXLAN_DEFAULT_PORT)
-			label_add(&entry->label, "port: %u", port);
+			if_add_config(entry, "port", "%u", port);
 	}
 
 	if (vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) {
@@ -114,7 +114,7 @@ static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb)
 	}
 
 	if (priv->flags & VXLAN_COLLECT_METADATA) {
-		label_add(&entry->label, "mode: external");
+		if_add_config(entry, "mode", "external");
 	} else {
 		/* These can be set in COLLECT_METADATA, but are ignored by kernel */
 		if ((err = vxlan_fill_addr(&priv->group, AF_INET, vxlaninfo[IFLA_VXLAN_GROUP])))
@@ -142,13 +142,13 @@ static int vxlan_post(struct if_entry *entry, _unused struct netns_entry *root)
 
 	priv = (struct vxlan_priv *) entry->handler_private;
 	if (priv->local) {
-		label_add(&entry->label, "from: %s", priv->local->formatted);
+		if_add_config(entry, "from", "%s", priv->local->formatted);
 		if ((ife = tunnel_find_addr(entry->ns, priv->local))) {
 			link_set(ife, entry);
 			entry->flags |= IF_LINK_WEAK;
 		}
 	}
 	if (priv->group)
-		label_add(&entry->label, "to: %s", priv->group->formatted);
+		if_add_config(entry, "to", "%s", priv->group->formatted);
 	return 0;
 }

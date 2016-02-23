@@ -513,11 +513,11 @@ static struct if_entry *create_iface(char *name, char *br_name, struct netns_ent
 static void label_iface(struct ovs_if *iface)
 {
 	if (iface->type && *iface->type)
-		label_add(&iface->link->label, "type: %s", iface->type);
+		if_add_config(iface->link, "type", "%s", iface->type);
 	if (iface->local_ip)
-		label_add(&iface->link->label, "from %s", iface->local_ip);
+		if_add_config(iface->link, "from", "%s", iface->local_ip);
 	if (iface->remote_ip)
-		label_add(&iface->link->label, "to %s", iface->remote_ip);
+		if_add_config(iface->link, "to", "%s", iface->remote_ip);
 }
 
 static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
@@ -538,7 +538,7 @@ static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
 		link->edge_label = buf;
 	}
 	if (port->bond_mode)
-		label_add(&link->label, "bond mode: %s", port->bond_mode);
+		if_add_config(link, "bond mode", "%s", port->bond_mode);
 }
 
 static void link_vxlan(struct ovs_if *iface)

@@ -59,3 +59,48 @@ void label_free(struct label *list)
 {
 	list_free(list, (destruct_f)label_destruct);
 }
+
+int label_add_property(struct label_property **prop, int type,
+		       const char *key, const char *fmt, ...)
+{
+	va_list ap;
+	struct label_property *new;
+	int err = ENOMEM;
+
+	va_start(ap, fmt);
+	new = calloc(1, sizeof(*new));
+	if (!new)
+		goto out;
+
+	new->key = strdup(key);
+	if (!new->key)
+		goto out_new;
+
+	if (vasprintf(&new->value, fmt, ap) < 0) {
+		goto out_key;
+	}
+
+	new->type = type;
+	new->next = *prop;
+	*prop = new;
+	return 0;
+
+out_key:
+	free(new->key);
+out_new:
+	free(new);
+out:
+	va_end(ap);
+	return err;
+}
+
+static void label_property_destruct(struct label_property *prop)
+{
+	free(prop->key);
+	free(prop->value);
+}
+
+void label_free_property(struct label_property *list)
+{
+	list_free(list, (destruct_f)label_property_destruct);
+}

@@ -196,7 +196,7 @@ int team_parse_setup(json_t *jsetup, struct if_entry *entry, json_error_t *jerr)
 	if (json_unpack_ex(jsetup, jerr, 0, "{s:s}", "runner_name", &runner_name))
 		return -1;
 
-	label_add(&entry->label, "runner: %s", runner_name);
+	if_add_config(entry, "runner", "%s", runner_name);
 	return 0;
 }
 
@@ -312,7 +312,7 @@ static int team_post(struct if_entry *master, _unused struct netns_entry *root)
 				le->entry->flags |= IF_PASSIVE_SLAVE;
 			} else {
 				master->active_slave = le->entry;
-				label_add(&master->label, "active port: %s", le->entry->if_name);
+				if_add_state(master, "active port", "%s", le->entry->if_name);
 			}
 		}
 	}
