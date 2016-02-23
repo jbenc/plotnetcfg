@@ -27,10 +27,20 @@ format.
 
 .TP
 namespaces
-.I (array)
-Array of name space objects. The first one is always the root name space.
+.I (object)
+Associative array of name space objects. Key is the namespace id.
+
+.TP
+root
+.I (object)
+The id and key of root namespace.
 
 .SS Name space object fields
+
+.TP
+id
+.I (string)
+An arbitrary identifier, unique among other namespaces.
 
 .TP
 name
@@ -41,8 +51,8 @@ name space has an empty name.
 
 .TP
 interfaces
-.I (array)
-Array of interface objects.
+.I (object)
+Associative array of interface objects. Key is the interface id.
 
 .TP
 warnings
@@ -76,10 +86,10 @@ specific cases.
 
 .TP
 info
-.I (array)
-Array of strings. Contains additional information about the interface,
-formatted. An example is tunnel endpoints. The exact content is dependent on
-the type of the interface.
+.I (object)
+Contains additional information about the interface. Values are formatted
+strings, e.g. tunnel endpoints. The exact content is dependent on the
+type of the interface.
 
 .TP
 addresses

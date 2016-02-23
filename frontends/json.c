@@ -90,13 +90,14 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 static json_t *interfaces_to_array(struct if_entry *entry)
 {
 	struct if_list_entry *iflist;
-	json_t *ifarr, *ifobj, *children, *parents;
+	json_t *ifarr, *ifobj, *children, *parents, *jconn;
 	char *s;
 
-	ifarr = json_array();
+	ifarr = json_object();
 	while (entry) {
 		ifobj = json_object();
 		json_object_set_new(ifobj, "id", json_string(ifid(entry)));
+		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
 		json_object_set_new(ifobj, "name", json_string(entry->if_name));
 		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
 		json_object_set_new(ifobj, "info", label_to_array(entry->label));
@@ -117,37 +118,39 @@ static json_t *interfaces_to_array(struct if_entry *entry)
 		if (entry->warnings)
 			json_object_set_new(ifobj, "warning", json_true());
 
-		parents = json_array();
-		if (entry->master)
-			json_array_append_new(parents,
-					      connection(entry->master,
-						         entry->link ? NULL : entry->edge_label));
-		else
-			for (iflist = entry->rev_link; iflist; iflist = iflist->next)
-				json_array_append_new(parents,
-						      connection(iflist->entry,
-								 iflist->entry->edge_label));
-		if (json_array_size(parents))
+		parents = json_object();
+		if (entry->master) {
+			jconn = connection(entry->master,
+						      entry->link ? NULL : entry->edge_label);
+			json_object_set_new(parents, ifid(entry->master), jconn);
+		} else
+			for (iflist = entry->rev_link; iflist; iflist = iflist->next) {
+				jconn = connection(iflist->entry, iflist->entry->edge_label);
+				json_object_set_new(parents, ifid(iflist->entry), jconn);
+			}
+		if (json_object_size(parents))
 			json_object_set(ifobj, "parents", parents);
 		json_decref(parents);
 
-		children = json_array();
-		if (entry->link)
-			json_array_append_new(children, connection(entry->link, entry->edge_label));
-		else
-			for (iflist = entry->rev_master; iflist; iflist = iflist->next)
-				json_array_append_new(children,
-						      connection(iflist->entry,
-								 iflist->entry->link ? NULL :
-								 iflist->entry->edge_label));
-		if (json_array_size(children))
+		children = json_object();
+		if (entry->link) {
+			jconn = connection(entry->link, entry->edge_label);
+			json_object_set_new(children, ifid(entry->link), jconn);
+		} else
+			for (iflist = entry->rev_master; iflist; iflist = iflist->next) {
+				jconn = connection(iflist->entry,
+						   iflist->entry->link ? NULL :
+						   iflist->entry->edge_label);
+				json_object_set_new(children, ifid(iflist->entry), jconn);
+			}
+		if (json_object_size(children))
 			json_object_set(ifobj, "children", children);
 		json_decref(children);
 
 		if (entry->peer)
 			json_object_set(ifobj, "peer", connection(entry->peer, NULL));
 
-		json_array_append_new(ifarr, ifobj);
+		json_object_set_new(ifarr, ifid(entry), ifobj);
 		entry = entry->next;
 	}
 	return ifarr;
@@ -164,17 +167,19 @@ static void json_output(FILE *f, struct netns_entry *root)
 	json_object_set_new(output, "format", json_integer(2));
 	json_object_set_new(output, "version", json_string(VERSION));
 	json_object_set_new(output, "date", json_string(ctime(&cur)));
-	ns_list = json_array();
+	json_object_set_new(output, "root", json_string(nsid(root)));
+	ns_list = json_object();
 	for (entry = root; entry; entry = entry->next) {
 		ns = json_object();
+		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
 		json_object_set_new(ns, "interfaces", interfaces_to_array(entry->ifaces));
 		if (entry->warnings)
 			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));
-		json_array_append_new(ns_list, ns);
+		json_object_set_new(ns_list, nsid(entry), ns);
 	}
 	json_object_set_new(output, "namespaces", ns_list);
-	json_dumpf(output, f, 0);
+	json_dumpf(output, f, JSON_SORT_KEYS | JSON_COMPACT);
 	json_decref(output);
 }
 

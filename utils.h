@@ -17,6 +17,7 @@
 #define _UTILS_H
 
 struct if_entry;
+struct netns_entry;
 
 #define _unused __attribute__((unused))
 
@@ -28,5 +29,6 @@ void list_free(void *list, destruct_f destruct);
 /* Returns static buffer. */
 char *ifstr(struct if_entry *entry);
 char *ifid(struct if_entry *entry);
+char *nsid(struct netns_entry *entry);
 
 #endif

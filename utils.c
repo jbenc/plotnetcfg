@@ -52,20 +52,28 @@ char *ifstr(struct if_entry *entry)
 	return buf;
 }
 
+#define INTERNAL_NS_MAX (NAME_MAX)
+#define NETNS_MAX (NAME_MAX + 1)
+#define IFID_MAX (INTERNAL_NS_MAX + NETNS_MAX + IFNAMSIZ + 1)
 char *ifid(struct if_entry *entry)
 {
-	static char buf[IFNAMSIZ + 2 * NAME_MAX + 6 + 1];
-	char *ns;
+	static char buf[IFID_MAX + 1];
+	char *ins, *ns;
 
-	ns = entry->ns->name;
-	if (!ns)
-		/* root ns */
-		ns = "";
-	if (entry->internal_ns)
-		snprintf(buf, sizeof(buf), "//%s/%s/%s",
-			 entry->internal_ns, ns, entry->if_name);
-	else
-		snprintf(buf, sizeof(buf), "%s/%s",
-			 ns, entry->if_name);
+	ins = entry->internal_ns ? : "";
+	ns = nsid(entry->ns);
+
+	snprintf(buf, sizeof(buf), "%s%s/%s", ns, ins, entry->if_name);
+	return buf;
+}
+
+char *nsid(struct netns_entry *entry)
+{
+	static char buf[NETNS_MAX + 1];
+
+	if (!entry->name)
+		return "/";
+
+	snprintf(buf, sizeof(buf), "%s/", entry->name);
 	return buf;
 }
