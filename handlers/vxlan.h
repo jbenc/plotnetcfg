@@ -14,7 +14,7 @@
  */
 
 #ifndef _HANDLERS_VXLAN_H
-#define _HANDLERS_VXLA_H
+#define _HANDLERS_VXLAN_H
 
 void handler_vxlan_register(void);
 
