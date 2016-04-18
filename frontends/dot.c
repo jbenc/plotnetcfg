@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <time.h>
 #include "../frontend.h"
@@ -23,6 +24,7 @@
 #include "../netns.h"
 #include "../utils.h"
 #include "../version.h"
+#include "../args.h"
 #include "dot.h"
 
 static void output_label(FILE *f, struct label *list)
@@ -42,11 +44,13 @@ static void output_label_properties(FILE *f, struct label_property *list, unsign
 			fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
 }
 
-static void output_addresses(FILE *f, struct if_addr_entry *list)
+static void output_addresses(FILE *f, struct if_addr_entry *list, struct output_entry *out)
 {
 	struct if_addr_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
+    if ((out->filter_ipv6_linklocal) & (!strncmp(ptr->addr.formatted, "fe80", 4)))
+      continue;
 		fprintf(f, "\\n%s", ptr->addr.formatted);
 		if (ptr->peer.formatted)
 			fprintf(f, " peer %s", ptr->peer.formatted);
@@ -59,21 +63,23 @@ static void output_mtu(FILE *f, struct if_entry *ptr)
 		fprintf(f, "\\nMTU %d", ptr->mtu);
 }
 
-static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int prop_mask)
+static void output_ifaces_pass1(FILE *f, struct if_entry *list, struct output_entry *out)
 {
 	struct if_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
+		if ((out->filter_loopback) && (ptr->flags & IF_LOOPBACK))
+			continue;
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
-		output_label_properties(f, ptr->prop, prop_mask);
+		output_label_properties(f, ptr->prop, out->print_mask);
 		output_mtu(f, ptr);
-		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask))
-			output_addresses(f, ptr->addr);
+		if (label_prop_match_mask(IF_PROP_CONFIG, out->print_mask))
+			output_addresses(f, ptr->addr, out);
 		fprintf(f, "\"");
 
-		if (label_prop_match_mask(IF_PROP_STATE, prop_mask)) {
+		if (label_prop_match_mask(IF_PROP_STATE, out->print_mask)) {
 			if (ptr->flags & IF_INTERNAL)
 				fprintf(f, ",style=dotted");
 			else if (!(ptr->flags & IF_UP))
@@ -89,7 +95,7 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int pro
 	}
 }
 
-static void output_ifaces_pass2(FILE *f, struct if_entry *list)
+static void output_ifaces_pass2(FILE *f, struct if_entry *list, struct output_entry *out)
 {
 	struct if_entry *ptr;
 
@@ -154,12 +160,12 @@ static void dot_output(FILE *f, struct netns_entry *root, struct output_entry *o
 			fprintf(f, "label=\"%s\"\n", ns->name);
 			fprintf(f, "fontcolor=\"black\"\n");
 		}
-		output_ifaces_pass1(f, ns->ifaces, output_entry->print_mask);
+		output_ifaces_pass1(f, ns->ifaces, output_entry);
 		if (ns->name)
 			fprintf(f, "}\n");
 	}
 	for (ns = root; ns; ns = ns->next) {
-		output_ifaces_pass2(f, ns->ifaces);
+		output_ifaces_pass2(f, ns->ifaces, output_entry);
 	}
 	output_warnings(f, root);
 	fprintf(f, "}\n");

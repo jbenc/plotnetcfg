@@ -15,6 +15,8 @@
 
 #ifndef _FRONTEND_H
 #define _FRONTEND_H
+#include <stdbool.h>
+
 #include "netns.h"
 
 struct output_entry {
@@ -22,6 +24,8 @@ struct output_entry {
 	char *format, *file;
 	struct frontend *frontend;
 	unsigned int print_mask;
+	bool filter_loopback;
+	bool filter_ipv6_linklocal;
 };
 
 struct frontend {
