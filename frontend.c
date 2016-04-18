@@ -31,6 +31,8 @@ static struct output_entry default_output = {
 	.format = "dot",
 	.file = NULL,
 	.print_mask = -1U,
+	.filter_loopback = false,
+	.filter_ipv6_linklocal = false,
 };
 
 static struct output_entry *output = NULL;
@@ -109,6 +111,28 @@ static int set_nostate()
 	return 0;
 }
 
+static int set_loopback()
+{
+	int err;
+
+	if ((err = require_format()))
+		return err;
+
+	output->filter_loopback = true;
+	return 0;
+}
+
+static int set_v6_linklocal()
+{
+	int err;
+
+	if ((err = require_format()))
+		return err;
+
+	output->filter_ipv6_linklocal = true;
+	return 0;
+}
+
 static int print_formats(_unused char *arg)
 {
 	struct frontend *f;
@@ -135,6 +159,14 @@ static struct arg_option options[] = {
 	{ .long_name = "list-formats", .short_name = 'F',
 	  .type = ARG_CALLBACK, .action.callback = print_formats,
 	  .help = "list available output formats",
+	},
+	{ .long_name = "filter-loopback", .short_name = 'l', .has_arg = 0,
+	  .type = ARG_CALLBACK, .action.callback = set_loopback,
+	  .help = "don't output loopback interfaces (dot only)",
+	},
+	{ .long_name = "filter-v6-local", .short_name = 'L', .has_arg = 0,
+	  .type = ARG_CALLBACK, .action.callback = set_v6_linklocal,
+	  .help = "don't output v6 link-local addresses (dot only)",
 	},
 };
 
