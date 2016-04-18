@@ -68,8 +68,8 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list, struct output_en
 	struct if_entry *ptr;
 
 	for (ptr = list; ptr; ptr = ptr->next) {
-    if ((out->filter_loopback) && (ptr->flags & IF_LOOPBACK))
-      continue;
+		if ((out->filter_loopback) && (ptr->flags & IF_LOOPBACK))
+			continue;
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
