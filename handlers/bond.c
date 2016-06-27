@@ -46,7 +46,7 @@ struct bond_private {
 	char *active_slave_name;
 };
 
-static int bond_netlink(struct if_entry *entry, struct rtattr **tb);
+static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 static int bond_scan(struct if_entry *entry);
 static int bond_post(struct if_entry *entry, struct netns_entry *root);
 static void bond_cleanup(struct if_entry *entry);
@@ -65,17 +65,12 @@ void handler_bond_register(void)
 	handler_register(&h_bond);
 }
 
-static int bond_netlink(struct if_entry *entry, struct rtattr **tb)
+static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 {
 	struct bond_private *priv = entry->handler_private;
-	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	struct rtattr *bondinfo[IFLA_BOND_MAX + 1];
 
-	if (!tb[IFLA_LINKINFO])
-		return ENOENT;
-	rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
-
-	if (!linkinfo[IFLA_INFO_DATA])
+	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
 	rtnl_parse_nested(bondinfo, IFLA_BOND_MAX, linkinfo[IFLA_INFO_DATA]);
 

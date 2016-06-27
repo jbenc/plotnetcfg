@@ -36,6 +36,7 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 {
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr *tb[IFLA_MAX + 1];
+	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	int len = n->nlmsg_len;
 	int err;
 
@@ -65,6 +66,8 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	}
 	if (tb[IFLA_MTU])
 		dest->mtu = *(int *)RTA_DATA(tb[IFLA_MTU]);
+	if (tb[IFLA_LINKINFO])
+		rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 
 	if (ifi->ifi_flags & IFF_LOOPBACK) {
 		dest->driver = strdup("loopback");
@@ -79,7 +82,7 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	if ((err = handler_init(dest)))
 		goto err_driver;
 
-	if ((err = handler_netlink(dest, tb)))
+	if ((err = handler_netlink(dest, tb[IFLA_LINKINFO] ? linkinfo : NULL)))
 		if (err != ENOENT)
 			goto err_driver;
 

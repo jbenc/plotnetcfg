@@ -86,11 +86,11 @@ int handler_init(struct if_entry *entry)
 	return 0;
 }
 
-int handler_netlink(struct if_entry *entry, struct rtattr **tb)
+int handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 {
 	int err = 0;
 
-	handler_err_loop(err, netlink, entry, tb);
+	handler_err_loop(err, netlink, entry, linkinfo);
 	return err;
 }
 

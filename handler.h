@@ -42,7 +42,7 @@ struct handler {
 	struct handler *next;
 	const char *driver;
 	size_t private_size;
-	int (*netlink)(struct if_entry *entry, struct rtattr **tb);
+	int (*netlink)(struct if_entry *entry, struct rtattr **linkinfo);
 	int (*scan)(struct if_entry *entry);
 	int (*post)(struct if_entry *entry, struct netns_entry *root);
 	void (*cleanup)(struct if_entry *entry);
@@ -50,7 +50,7 @@ struct handler {
 
 void handler_register(struct handler *h);
 int handler_init(struct if_entry *entry);
-int handler_netlink(struct if_entry *entry, struct rtattr **tb);
+int handler_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 int handler_scan(struct if_entry *entry);
 int handler_post(struct netns_entry *root);
 void handler_cleanup(struct if_entry *entry);

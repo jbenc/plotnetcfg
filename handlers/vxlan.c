@@ -36,7 +36,7 @@ struct vxlan_priv {
 	int flags;
 };
 
-static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb);
+static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 static int vxlan_post(struct if_entry *entry, struct netns_entry *root);
 
 static struct handler h_vxlan = {
@@ -73,9 +73,8 @@ static int vxlan_fill_addr(struct addr **addr, int ai_family, struct rtattr *rta
 	return 0;
 }
 
-static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb)
+static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 {
-	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	struct rtattr *vxlaninfo[IFLA_VXLAN_MAX + 1];
 	uint16_t port;
 	struct vxlan_priv *priv;
@@ -88,13 +87,7 @@ static int vxlan_netlink(struct if_entry *entry, struct rtattr **tb)
 	}
 	entry->handler_private = priv;
 
-	if (!tb[IFLA_LINKINFO]) {
-		err = ENOENT;
-		goto err_priv;
-	}
-	rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
-
-	if (!linkinfo[IFLA_INFO_DATA]) {
+	if (!linkinfo || !linkinfo[IFLA_INFO_DATA]) {
 		err = ENOENT;
 		goto err_priv;
 	}
