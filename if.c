@@ -75,8 +75,15 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	} else
 		dest->driver = ethtool_driver(dest->if_name);
 	if (!dest->driver) {
-		err = ENOMEM;
-		goto err_name;
+		/* No ethtool ops available, try IFLA_INFO_KIND */
+		if (tb[IFLA_LINKINFO] && linkinfo[IFLA_INFO_KIND])
+			dest->driver = strdup(RTA_DATA(linkinfo[IFLA_INFO_KIND]));
+	}
+	if (!dest->driver) {
+		/* Allow the program to continue at least with generic stuff
+		 * as there may be interfaces that do not implement any of
+		 * the mechanisms for driver detection that we use */
+		dest->driver = strdup("unknown driver, please report a bug");
 	}
 
 	if ((err = handler_init(dest)))
@@ -91,7 +98,6 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 err_driver:
 	free(dest->driver);
 	dest->driver = NULL;
-err_name:
 	free(dest->if_name);
 	dest->if_name = NULL;
 	return err;
