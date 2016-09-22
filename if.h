@@ -52,6 +52,7 @@ struct if_entry {
 	int peer_netnsid;
 	struct if_entry *peer;
 	struct if_addr_entry *addr;
+	struct mac_addr mac_addr;
 	char *edge_label;
 	void *handler_private;
 	int warnings;

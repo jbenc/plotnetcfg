@@ -27,6 +27,12 @@ struct addr {
 	void *raw;
 };
 
+struct mac_addr {
+	int len;
+	unsigned char *raw;
+	char *formatted;
+};
+
 int addr_init(struct addr *addr, int ai_family, int prefixlen, void *raw);
 int addr_init_netlink(struct addr *dest, const struct ifaddrmsg *ifa,
 		      const struct rtattr *rta);
@@ -36,4 +42,8 @@ int addr_parse_raw(void *dest, const char *str);
 
 void addr_destruct(struct addr *addr);
 
+int mac_addr_init(struct mac_addr *addr);
+int mac_addr_fill_netlink(struct mac_addr *addr, const unsigned char *data, int len);
+
+void mac_addr_destruct(struct mac_addr *addr);
 #endif

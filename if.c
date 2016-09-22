@@ -69,6 +69,12 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	if (tb[IFLA_LINKINFO])
 		rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 
+	if(tb[IFLA_ADDRESS])
+		if ((err = mac_addr_fill_netlink(&dest->mac_addr,
+						 RTA_DATA(tb[IFLA_ADDRESS]),
+						 RTA_PAYLOAD(tb[IFLA_ADDRESS]))))
+			return err;
+
 	if (ifi->ifi_flags & IFF_LOOPBACK) {
 		dest->driver = strdup("loopback");
 		dest->flags |= IF_LOOPBACK;
@@ -165,6 +171,7 @@ static struct if_entry *if_alloc(void)
 		return NULL;
 	entry->link_netnsid = -1;
 	entry->peer_netnsid = -1;
+	mac_addr_init(&entry->mac_addr);
 	return entry;
 }
 
@@ -222,6 +229,7 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->internal_ns);
 	free(entry->if_name);
 	free(entry->edge_label);
+	mac_addr_destruct(&entry->mac_addr);
 	label_free_property(entry->prop);
 	list_free(entry->addr, (destruct_f)if_addr_destruct);
 	list_free(entry->rev_master, NULL);

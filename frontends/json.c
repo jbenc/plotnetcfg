@@ -118,6 +118,8 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 		if (label_prop_match_mask(IF_PROP_CONFIG, output_entry->print_mask)) {
 			json_object_set_new(ifobj, "addresses", addresses_to_array(entry->addr));
 			json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
+			if ((entry->flags & IF_LOOPBACK) == 0 && entry->mac_addr.formatted)
+				json_object_set_new(ifobj, "mac", json_string(entry->mac_addr.formatted));
 		}
 		json_object_set_new(ifobj, "type", json_string(entry->flags & IF_INTERNAL ?
 							       "internal" :

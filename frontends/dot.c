@@ -69,8 +69,11 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int pro
 			fprintf(f, " (%s)", ptr->driver);
 		output_label_properties(f, ptr->prop, prop_mask);
 		output_mtu(f, ptr);
-		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask))
+		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {
 			output_addresses(f, ptr->addr);
+			if ((ptr->flags & IF_LOOPBACK) == 0 && ptr->mac_addr.formatted)
+				fprintf(f, "\nmac %s", ptr->mac_addr.formatted);
+		}
 		fprintf(f, "\"");
 
 		if (label_prop_match_mask(IF_PROP_STATE, prop_mask)) {

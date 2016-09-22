@@ -74,3 +74,54 @@ void addr_destruct(struct addr *addr)
 		addr->raw = addr->formatted = NULL;
 	}
 }
+
+int mac_addr_init(struct mac_addr *addr)
+{
+	addr->len = 0;
+	addr->raw = NULL;
+	addr->formatted = NULL;
+	return 0;
+}
+
+int mac_addr_fill_netlink(struct mac_addr *addr, const unsigned char *data, int len)
+{
+	int i;
+
+	addr->len = len;
+
+	addr->raw = malloc(len);
+	if (!addr->raw)
+		return ENOMEM;
+
+	addr->formatted = malloc(len * 3);
+	if (!addr->raw)
+		goto err_raw;
+
+	memcpy(addr->raw, data, len);
+
+	for (i = 0; i < len; i++)
+		if (3 != snprintf(addr->formatted + i * 3, 3, "%02x:", data[i]))
+			goto err_formatted;
+
+	addr->formatted[len * 3] = '\0';
+
+	return 0;
+
+err_formatted:
+	free(addr->formatted);
+	addr->formatted = NULL;
+err_raw:
+	free(addr->raw);
+	addr->raw = NULL;
+	addr->len = 0;
+
+	return errno;
+}
+
+void mac_addr_destruct(struct mac_addr *addr)
+{
+	if (addr->raw)
+		free(addr->raw);
+	if (addr->formatted)
+		free(addr->formatted);
+}
