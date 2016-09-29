@@ -153,6 +153,14 @@ err_out:
 	return err;
 }
 
+int nl_check_interrupted_dump(struct nlmsg_entry *entry)
+{
+	for (; entry; entry = entry->next)
+		if (entry->h.nlmsg_flags & NLM_F_DUMP_INTR)
+			return 1;
+	return 0;
+}
+
 int nl_exchange(struct nl_handle *hnd,
 		struct nlmsghdr *src, struct nlmsg_entry **dest)
 {
@@ -162,12 +170,28 @@ int nl_exchange(struct nl_handle *hnd,
 	};
 	int is_dump;
 	int err;
+	int retry = 16;
 
 	is_dump = !!(src->nlmsg_flags & NLM_F_DUMP);
-	err = nl_send(hnd, &iov, 1);
-	if (err)
-		return err;
-	return nl_recv(hnd, dest, is_dump);
+	while (1) {
+		if (!retry--)
+			return EINTR;
+
+		err = nl_send(hnd, &iov, 1);
+		if (err)
+			return err;
+		err = nl_recv(hnd, dest, is_dump);
+		if (err)
+			return err;
+
+		if (is_dump && nl_check_interrupted_dump(*dest)) {
+			nlmsg_free(*dest);
+			*dest = NULL;
+			continue;
+		}
+
+		return 0;
+	}
 }
 
 /* The original payload is not freed. Returns 0 in case of error, length
