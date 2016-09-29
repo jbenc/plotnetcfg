@@ -14,15 +14,15 @@
  */
 
 #define _GNU_SOURCE
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "sysfs.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
-#include "sysfs.h"
+#include <unistd.h>
 
 #define PATH "/tmp/plotnetcfg-sys-XXXXXX"
 #define LEN sizeof(PATH)

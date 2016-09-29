@@ -13,15 +13,14 @@
  * GNU General Public License for more details.
  */
 
-#include <errno.h>
-#include <fcntl.h>
-#include <net/if.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "../handler.h"
-#include "../sysfs.h"
 #include "bridge.h"
+#include <errno.h>
+#include <net/if.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "../handler.h"
+#include "../if.h"
+#include "../sysfs.h"
 
 static int bridge_scan(struct if_entry *entry);
 

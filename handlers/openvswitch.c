@@ -14,28 +14,28 @@
  */
 
 #define _GNU_SOURCE
+#include "openvswitch.h"
 #include <errno.h>
 #include <jansson.h>
+#include <net/if.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <linux/un.h>
-#include <net/if.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include "../args.h"
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
-#include "../match.h"
 #include "../master.h"
+#include "../match.h"
 #include "../netlink.h"
 #include "../netns.h"
 #include "../tunnel.h"
 #include "../utils.h"
-#include "openvswitch.h"
 
 #include "../compat.h"
 

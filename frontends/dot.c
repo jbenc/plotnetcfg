@@ -13,17 +13,17 @@
  * GNU General Public License for more details.
  */
 
+#include "dot.h"
 #include <stdio.h>
 #include <sys/socket.h>
 #include <time.h>
+#include "../addr.h"
 #include "../frontend.h"
 #include "../handler.h"
 #include "../if.h"
-#include "../label.h"
 #include "../netns.h"
 #include "../utils.h"
 #include "../version.h"
-#include "dot.h"
 
 static void output_label(FILE *f, struct label *list)
 {

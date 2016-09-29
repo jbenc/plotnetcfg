@@ -16,11 +16,10 @@
 #ifndef _HANDLER_H
 #define _HANDLER_H
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <linux/rtnetlink.h>
-#include "if.h"
-#include "netns.h"
+
+struct if_entry;
+struct netns_entry;
+struct rtattr;
 
 /* Only one handler for each driver allowed.
  * Generic handlers called for every interface are supported and are created

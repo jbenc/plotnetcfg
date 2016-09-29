@@ -13,12 +13,12 @@
  * GNU General Public License for more details.
  */
 
+#include "handler.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include "netns.h"
 #include "if.h"
-#include "handler.h"
+#include "netns.h"
 
 static struct handler *handlers = NULL;
 static struct handler *handlers_tail = NULL;

@@ -14,13 +14,13 @@
  */
 
 #define _GNU_SOURCE
+#include "label.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "utils.h"
-#include "label.h"
 
 int label_add(struct label **list, char *fmt, ...)
 {

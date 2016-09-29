@@ -16,15 +16,13 @@
 
 /* Resolves master_index to the actual interface. */
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include "handler.h"
-#include "match.h"
-#include "utils.h"
-#include "master.h"
 #include "if.h"
+#include <errno.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include "master.h"
+#include "match.h"
+#include "netns.h"
 
 #define memberof(ptr, offset, type) (*((type *) ((char *) (ptr) + (offset))))
 

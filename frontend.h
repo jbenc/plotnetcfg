@@ -15,7 +15,10 @@
 
 #ifndef _FRONTEND_H
 #define _FRONTEND_H
-#include "netns.h"
+
+#include "stdio.h"
+
+struct netns_entry;
 
 struct output_entry {
 	struct output_entry *next;

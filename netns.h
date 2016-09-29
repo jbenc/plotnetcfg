@@ -20,7 +20,6 @@
 
 struct if_entry;
 struct label;
-
 struct netns_entry;
 
 struct netns_id {

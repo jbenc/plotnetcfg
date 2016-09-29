@@ -14,19 +14,20 @@
  */
 
 #define _GNU_SOURCE
+#include "vxlan.h"
 #include <errno.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/socket.h>
-#include <linux/rtnetlink.h>
-#include "../compat.h"
+#include "../addr.h"
 #include "../handler.h"
-#include "../label.h"
+#include "../if.h"
 #include "../master.h"
 #include "../netlink.h"
-#include "../utils.h"
 #include "../tunnel.h"
-#include "vxlan.h"
+#include "../utils.h"
+
+#include "../compat.h"
 
 #define VXLAN_DEFAULT_PORT 46354
 

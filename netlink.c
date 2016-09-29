@@ -13,18 +13,18 @@
  * GNU General Public License for more details.
  */
 
+#include "netlink.h"
 #include <errno.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <linux/genetlink.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <linux/netlink.h>
-#include <linux/genetlink.h>
-#include <linux/rtnetlink.h>
 #include "utils.h"
-#include "netlink.h"
 
 static int nl_open(struct nl_handle *hnd, int family)
 {

@@ -17,9 +17,10 @@
 #define _IF_H
 
 #include "addr.h"
+#include "label.h"
 
-struct netns_entry;
 struct label;
+struct netns_entry;
 
 struct if_addr_entry {
 	struct if_addr_entry *next;

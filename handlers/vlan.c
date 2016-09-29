@@ -14,16 +14,14 @@
  */
 
 #define _GNU_SOURCE
+#include "vlan.h"
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "../handler.h"
+#include "../if.h"
 #include "../netlink.h"
-#include "vlan.h"
 
 struct vlan_private {
 	unsigned int tag;

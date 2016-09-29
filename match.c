@@ -13,11 +13,11 @@
  * GNU General Public License for more details.
  */
 
+#include "match.h"
 #include <stdlib.h>
-#include "netns.h"
 #include "if.h"
 #include "master.h"
-#include "match.h"
+#include "netns.h"
 
 int match_if_heur(struct if_entry **found,
 		  struct netns_entry *root, int all_ns,

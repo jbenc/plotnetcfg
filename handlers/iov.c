@@ -14,14 +14,17 @@
  */
 
 #define _GNU_SOURCE
+#include "iov.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../sysfs.h"
 #include "../handler.h"
+#include "../if.h"
 #include "../match.h"
-#include "iov.h"
+#include "../sysfs.h"
+
+struct netns_entry;
 
 static int iov_scan(struct if_entry *entry);
 static int iov_post(struct if_entry *entry, struct netns_entry *root);

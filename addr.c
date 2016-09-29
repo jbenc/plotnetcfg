@@ -14,12 +14,14 @@
  * GNU General Public License for more details.
  */
 
-#include <arpa/inet.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
 #include "addr.h"
+#include <arpa/inet.h>
+#include <errno.h>
+#include <linux/rtnetlink.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 
 int addr_init(struct addr *dest, int family, int prefixlen, void *raw)
 {

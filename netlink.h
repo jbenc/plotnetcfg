@@ -16,8 +16,11 @@
 #ifndef _NETLINK_H
 #define _NETLINK_H
 
+#include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+
+struct rtattr;
 
 struct nl_handle {
 	int fd;

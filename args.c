@@ -13,12 +13,11 @@
  * GNU General Public License for more details.
  */
 
+#include "args.h"
 #include <assert.h>
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include "args.h"
 
 static struct arg_option *options = NULL;
 static struct arg_option *options_tail = NULL;

@@ -13,20 +13,18 @@
  * GNU General Public License for more details.
  */
 
+#include "ethtool.h"
 #include <errno.h>
-#include <linux/errno.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 #include <net/if.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "ethtool.h"
-
-#include <stdio.h>
 
 static int ethtool_ioctl(const char *ifname, void *data)
 {

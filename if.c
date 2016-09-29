@@ -14,8 +14,10 @@
  */
 
 #define _GNU_SOURCE
+#include "if.h"
 #include <arpa/inet.h>
 #include <errno.h>
+#include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,8 +29,8 @@
 #include "handler.h"
 #include "label.h"
 #include "netlink.h"
+#include "netns.h"
 #include "utils.h"
-#include "if.h"
 
 #include "compat.h"
 

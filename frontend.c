@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include "frontend.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,6 @@
 #include "args.h"
 #include "if.h"
 #include "utils.h"
-#include "frontend.h"
 
 static struct frontend *frontends = NULL;
 static struct frontend *frontends_tail = NULL;

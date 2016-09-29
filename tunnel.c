@@ -13,15 +13,12 @@
  * GNU General Public License for more details.
  */
 
-#include <arpa/inet.h>
+#include "tunnel.h"
 #include <string.h>
-#include "handler.h"
+#include <sys/socket.h>
 #include "addr.h"
 #include "if.h"
 #include "match.h"
-#include "netns.h"
-#include "utils.h"
-#include "tunnel.h"
 
 static int match_tunnel(struct if_entry *entry, void *arg)
 {

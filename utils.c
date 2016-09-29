@@ -13,15 +13,13 @@
  * GNU General Public License for more details.
  */
 
-#include <arpa/inet.h>
+#include "utils.h"
 #include <limits.h>
 #include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "if.h"
 #include "netns.h"
-#include "utils.h"
 
 struct generic_list {
 	struct generic_list *next;

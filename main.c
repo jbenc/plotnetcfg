@@ -14,28 +14,28 @@
  */
 
 #include <linux/capability.h>
-#include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/syscall.h>
+#include <syscall.h>
 #include <unistd.h>
 #include "args.h"
-#include "master.h"
 #include "netns.h"
 #include "utils.h"
 #include "version.h"
+
 #include "frontend.h"
 #include "frontends/dot.h"
 #include "frontends/json.h"
+
 #include "handler.h"
+#include "handlers/bond.h"
 #include "handlers/bridge.h"
+#include "handlers/iov.h"
 #include "handlers/openvswitch.h"
+#include "handlers/team.h"
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
-#include "handlers/iov.h"
-#include "handlers/bond.h"
-#include "handlers/team.h"
 #include "handlers/vxlan.h"
 
 static void register_frontends(void)

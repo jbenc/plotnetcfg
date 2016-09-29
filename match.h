@@ -15,8 +15,9 @@
 
 #ifndef _MATCH_H
 #define _MATCH_H
-#include "if.h"
-#include "netns.h"
+
+struct if_entry;
+struct netns_entry;
 
 /* Find interface using a heuristic.
  * Callback returns 0 to ignore the interface, < 0 for error, > 0 for

@@ -17,7 +17,8 @@
 #ifndef _MASTER_H
 #define _MASTER_H
 
-#include "netns.h"
+struct if_entry;
+struct netns_entry;
 
 /*
  * Resolves entry->master_index to entry->master.

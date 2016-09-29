@@ -14,23 +14,26 @@
  */
 
 #define _GNU_SOURCE
+#include "team.h"
 #include <errno.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #include <fcntl.h>
-#include <sys/un.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/select.h>
 #include <jansson.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
 #include "../handler.h"
-#include "../label.h"
 #include "../if.h"
 #include "../utils.h"
-#include "team.h"
 
 #include "../compat.h"
+
+struct netns_entry;
 
 #define TEAMD_REQUEST_PREFIX	"REQUEST"
 #define TEAMD_ERR_PREFIX	"REPLY_ERROR"

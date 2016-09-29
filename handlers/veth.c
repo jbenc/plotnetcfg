@@ -13,16 +13,16 @@
  * GNU General Public License for more details.
  */
 
+#include "veth.h"
 #include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "../ethtool.h"
 #include "../handler.h"
+#include "../if.h"
 #include "../master.h"
 #include "../match.h"
-#include "../utils.h"
-#include "veth.h"
+
+struct netns_entry;
 
 static int veth_scan(struct if_entry *entry);
 static int veth_post(struct if_entry *entry, struct netns_entry *root);

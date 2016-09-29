@@ -13,17 +13,19 @@
  * GNU General Public License for more details.
  */
 
+#include "json.h"
 #include <arpa/inet.h>
 #include <jansson.h>
 #include <stdio.h>
+#include <sys/socket.h>
 #include <time.h>
+#include "../addr.h"
 #include "../frontend.h"
 #include "../if.h"
 #include "../label.h"
 #include "../netns.h"
 #include "../utils.h"
 #include "../version.h"
-#include "json.h"
 
 static json_t *label_to_array(struct label *entry)
 {

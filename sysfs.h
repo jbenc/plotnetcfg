@@ -16,6 +16,8 @@
 #ifndef _SYSFS_H
 #define _SYSFS_H
 
+#include <sys/types.h>
+
 int sysfs_init();
 int sysfs_mount(const char *name);
 void sysfs_umount();

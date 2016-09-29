@@ -17,8 +17,8 @@
 #ifndef _ADDR_H
 #define _ADDR_H
 
-#include <sys/socket.h>
-#include <linux/rtnetlink.h>
+struct ifaddrmsg;
+struct rtattr;
 
 struct addr {
 	int family;

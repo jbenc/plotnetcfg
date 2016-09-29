@@ -16,6 +16,7 @@
 #ifndef _TUNNEL_H
 #define _TUNNEL_H
 
+struct addr;
 struct if_entry;
 struct netns_entry;
 
