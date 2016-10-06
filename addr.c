@@ -102,10 +102,8 @@ int mac_addr_fill_netlink(struct mac_addr *addr, const unsigned char *data, int 
 	memcpy(addr->raw, data, len);
 
 	for (i = 0; i < len; i++)
-		if (3 != snprintf(addr->formatted + i * 3, 3, "%02x:", data[i]))
+		if (3 != snprintf(addr->formatted + i * 3, (i+1 == len) ? 3 : 4 , "%02x:", data[i]))
 			goto err_formatted;
-
-	addr->formatted[len * 3] = '\0';
 
 	return 0;
 
