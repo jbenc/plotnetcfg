@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 
-#define _GNU_SOURCE
 #include "if.h"
 #include <arpa/inet.h>
 #include <errno.h>

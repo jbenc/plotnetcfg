@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 
-#define _GNU_SOURCE
 #include "netns.h"
 #include <dirent.h>
 #include <errno.h>

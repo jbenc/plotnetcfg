@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 
-#define _GNU_SOURCE
 #include "bond.h"
 #include <errno.h>
 #include <stdint.h>

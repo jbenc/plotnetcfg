@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 
-#define _GNU_SOURCE
 #include "iov.h"
 #include <errno.h>
 #include <stdio.h>

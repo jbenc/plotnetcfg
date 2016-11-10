@@ -5,7 +5,7 @@ libs=$(wildcard $(jansson)/src/.libs/libjansson.a $(jansson)/lib/libjansson.a)
 INCLUDE=-I$(jansson)/src
 endif
 
-CFLAGS=-W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
+CFLAGS=-std=c99 -D_GNU_SOURCE -W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 
 OBJECTS=addr args ethtool frontend handler if label main master \
         match netlink netns sysfs tunnel utils
