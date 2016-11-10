@@ -50,7 +50,7 @@ static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 	if (!vlanattr[IFLA_VLAN_ID] ||
 	    RTA_PAYLOAD(vlanattr[IFLA_VLAN_ID]) < sizeof(__u16))
 		return ENOENT;
-	priv->tag = *(uint16_t *)RTA_DATA(vlanattr[IFLA_VLAN_ID]);
+	priv->tag = NLA_GET_U16(vlanattr[IFLA_VLAN_ID]);
 	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0)
 		return ENOMEM;
 	return 0;

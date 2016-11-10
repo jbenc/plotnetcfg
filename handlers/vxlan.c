@@ -94,16 +94,16 @@ static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 	rtnl_parse_nested(vxlaninfo, IFLA_VXLAN_MAX, linkinfo[IFLA_INFO_DATA]);
 
 	if (vxlaninfo[IFLA_VXLAN_ID])
-		if_add_config(entry, "VNI", "%u", *(uint32_t *)RTA_DATA(vxlaninfo[IFLA_VXLAN_ID]));
+		if_add_config(entry, "VNI", "%u", NLA_GET_U32(vxlaninfo[IFLA_VXLAN_ID]));
 
 	if (vxlaninfo[IFLA_VXLAN_PORT]) {
-		port = *(uint16_t *)RTA_DATA(vxlaninfo[IFLA_VXLAN_PORT]);
+		port = NLA_GET_U16(vxlaninfo[IFLA_VXLAN_PORT]);
 		if (port != VXLAN_DEFAULT_PORT)
 			if_add_config(entry, "port", "%u", port);
 	}
 
 	if (vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) {
-		priv->flags |= (*(uint8_t *) RTA_DATA(vxlaninfo[IFLA_VXLAN_COLLECT_METADATA])) ? VXLAN_COLLECT_METADATA : 0;
+		priv->flags |= NLA_GET_U8(vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) ? VXLAN_COLLECT_METADATA : 0;
 	}
 
 	if (priv->flags & VXLAN_COLLECT_METADATA) {

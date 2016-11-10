@@ -295,7 +295,7 @@ static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 		goto out;
 	rtnl_parse(tb, NETNSA_MAX, NETNS_RTA(NLMSG_DATA(&dst->h)), len);
 	if (tb[NETNSA_NSID])
-		res = *(int32_t *)RTA_DATA(tb[NETNSA_NSID]);
+		res = NLA_GET_S32(tb[NETNSA_NSID]);
 out:
 	nlmsg_free(dst);
 	return res;

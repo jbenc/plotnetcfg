@@ -59,14 +59,14 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 			dest->flags |= IF_HAS_LINK;
 	}
 	if (tb[IFLA_MASTER])
-		dest->master_index = *(int *)RTA_DATA(tb[IFLA_MASTER]);
+		dest->master_index = NLA_GET_U32(tb[IFLA_MASTER]);
 	if (tb[IFLA_LINK]) {
-		dest->link_index = *(int*)RTA_DATA(tb[IFLA_LINK]);
+		dest->link_index = NLA_GET_U32(tb[IFLA_LINK]);
 		if (tb[IFLA_LINK_NETNSID])
-			dest->link_netnsid = *(int*)RTA_DATA(tb[IFLA_LINK_NETNSID]);
+			dest->link_netnsid = NLA_GET_S32(tb[IFLA_LINK_NETNSID]);
 	}
 	if (tb[IFLA_MTU])
-		dest->mtu = *(int *)RTA_DATA(tb[IFLA_MTU]);
+		dest->mtu = NLA_GET_U32(tb[IFLA_MTU]);
 	if (tb[IFLA_LINKINFO])
 		rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 

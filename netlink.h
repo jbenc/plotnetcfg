@@ -16,6 +16,7 @@
 #ifndef _NETLINK_H
 #define _NETLINK_H
 
+#include <stdint.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -42,6 +43,12 @@ void nlmsg_free(struct nlmsg_entry *entry);
 
 int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
 		void **dest);
+
+#define NLA_GET(type, rta) (*(type *) RTA_DATA(rta))
+#define NLA_GET_U8(rta)  NLA_GET( uint8_t, rta)
+#define NLA_GET_U16(rta) NLA_GET(uint16_t, rta)
+#define NLA_GET_U32(rta) NLA_GET(uint32_t, rta)
+#define NLA_GET_S32(rta) NLA_GET( int32_t, rta)
 
 /* rtnetlink */
 

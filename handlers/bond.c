@@ -80,7 +80,7 @@ static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 	}
 
 	if (bondinfo[IFLA_BOND_ACTIVE_SLAVE]) {
-		priv->active_slave_index = *(uint32_t *)RTA_DATA(bondinfo[IFLA_BOND_ACTIVE_SLAVE]);
+		priv->active_slave_index = NLA_GET_U32(bondinfo[IFLA_BOND_ACTIVE_SLAVE]);
 	}
 
 	return 0;
