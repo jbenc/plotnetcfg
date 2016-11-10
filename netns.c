@@ -366,6 +366,8 @@ int netns_list(struct netns_entry **result, int supported)
 			return err;
 		if ((err = if_list(&entry->ifaces, entry)))
 			return err;
+		if ((err = netns_handler_scan(entry)))
+			return err;
 		sysfs_umount();
 	}
 	/* Walk all net name spaces again and gather all kernel assigned
@@ -422,6 +424,7 @@ int netns_switch_root(void)
 
 static void netns_list_destruct(struct netns_entry *entry)
 {
+	netns_handler_cleanup(entry);
 	list_free(entry->ids, NULL);
 	if_list_free(entry->ifaces);
 	free(entry->name);

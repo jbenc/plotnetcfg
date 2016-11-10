@@ -24,7 +24,7 @@ struct handler_list {
 	struct handler *head, *tail;
 };
 
-static struct handler_list if_handlers, global_handlers;
+static struct handler_list if_handlers, netns_handlers, global_handlers;
 
 void handler_register(struct handler_list *list, struct handler *h)
 {
@@ -39,6 +39,11 @@ void handler_register(struct handler_list *list, struct handler *h)
 void if_handler_register(struct if_handler *h)
 {
 	handler_register(&if_handlers, (struct handler *) h);
+}
+
+void netns_handler_register(struct netns_handler *h)
+{
+	handler_register(&netns_handlers, (struct handler *) h);
 }
 
 void global_handler_register(struct global_handler *h)
@@ -129,6 +134,26 @@ void if_handler_cleanup(struct if_entry *entry)
 
 	if (entry->handler_private)
 		free(entry->handler_private);
+}
+
+int netns_handler_scan(struct netns_entry *entry)
+{
+	struct netns_handler *h;
+	int err;
+
+	for_each_handler(h, netns_handlers)
+		if ((err = handler_callback(h, scan, entry)))
+			return err;
+
+	return 0;
+}
+
+void netns_handler_cleanup(struct netns_entry *entry)
+{
+	struct global_handler *h;
+
+	for_each_handler(h, netns_handlers)
+		handler_callback(h, cleanup, entry);
 }
 
 void global_handler_init(void)

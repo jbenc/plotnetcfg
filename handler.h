@@ -58,6 +58,16 @@ int if_handler_scan(struct if_entry *entry);
 int if_handler_post(struct netns_entry *root);
 void if_handler_cleanup(struct if_entry *entry);
 
+struct netns_handler {
+	struct handler handler;
+	int (*scan)(struct netns_entry *entry);
+	void (*cleanup)(struct netns_entry *entry);
+};
+
+void netns_handler_register(struct netns_handler *h);
+int netns_handler_scan(struct netns_entry *entry);
+void netns_handler_cleanup(struct netns_entry *entry);
+
 struct global_handler {
 	struct handler handler;
 	void (*init)(void);
