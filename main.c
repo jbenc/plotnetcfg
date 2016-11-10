@@ -37,6 +37,7 @@
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
 #include "handlers/vxlan.h"
+#include "handlers/route.h"
 
 static void register_frontends(void)
 {
@@ -55,6 +56,7 @@ static void register_handlers(void)
 	handler_veth_register();
 	handler_vlan_register();
 	handler_vxlan_register();
+	handler_route_register();
 }
 
 static int print_help(_unused char *arg)
