@@ -29,7 +29,7 @@ static int iov_scan(struct if_entry *entry);
 static int iov_post(struct if_entry *entry, struct netns_entry *root);
 static void iov_cleanup(struct if_entry *entry);
 
-static struct handler h_iov = {
+static struct if_handler h_iov = {
 	.scan = iov_scan,
 	.post = iov_post,
 	.cleanup = iov_cleanup,
@@ -37,7 +37,7 @@ static struct handler h_iov = {
 
 void handler_iov_register(void)
 {
-	handler_register(&h_iov);
+	if_handler_register(&h_iov);
 }
 
 static int iov_scan(struct if_entry *entry)

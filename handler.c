@@ -20,33 +20,33 @@
 #include "if.h"
 #include "netns.h"
 
-static struct handler *handlers = NULL;
-static struct handler *handlers_tail = NULL;
+static struct if_handler *if_handlers = NULL;
+static struct if_handler *if_handlers_tail = NULL;
 
 static struct global_handler *ghandlers = NULL;
 static struct global_handler *ghandlers_tail = NULL;
 
-void handler_register(struct handler *h)
+void if_handler_register(struct if_handler *h)
 {
 	h->next = NULL;
-	if (!handlers) {
-		handlers = handlers_tail = h;
+	if (!if_handlers) {
+		if_handlers = if_handlers_tail = h;
 		return;
 	}
-	handlers_tail->next = h;
-	handlers_tail = h;
+	if_handlers_tail->next = h;
+	if_handlers_tail = h;
 }
 
-static int driver_match(struct handler *h, struct if_entry *e)
+static int driver_match(struct if_handler *h, struct if_entry *e)
 {
 	return !h->driver || (e->driver && !strcmp(h->driver, e->driver));
 }
 
-#define handler_err_loop(err, method, entry, ...)				\
+#define if_handler_err_loop(err, method, entry, ...)				\
 	{								\
-		struct handler *ptr;					\
+		struct if_handler *ptr;					\
 									\
-		for (ptr = handlers; ptr; ptr = ptr->next) {		\
+		for (ptr = if_handlers; ptr; ptr = ptr->next) {		\
 			if (!ptr->method || !driver_match(ptr, entry))	\
 				continue;				\
 			err = ptr->method(entry, ##__VA_ARGS__);	\
@@ -55,22 +55,22 @@ static int driver_match(struct handler *h, struct if_entry *e)
 		}							\
 	}
 
-#define handler_loop(method, entry, ...)				\
+#define if_handler_loop(method, entry, ...)				\
 	{								\
-		struct handler *ptr;					\
+		struct if_handler *ptr;					\
 									\
-		for (ptr = handlers; ptr; ptr = ptr->next) {		\
+		for (ptr = if_handlers; ptr; ptr = ptr->next) {		\
 			if (!ptr->method || !driver_match(ptr, entry))	\
 				continue;				\
 			ptr->method(entry, ##__VA_ARGS__);		\
 		}							\
 	}
 
-int handler_init(struct if_entry *entry)
+int if_handler_init(struct if_entry *entry)
 {
-	struct handler *ptr;
+	struct if_handler *ptr;
 
-	for (ptr = handlers; ptr; ptr = ptr->next) {
+	for (ptr = if_handlers; ptr; ptr = ptr->next) {
 		if (!ptr->driver || strcmp(ptr->driver, entry->driver))
 			continue;
 
@@ -86,23 +86,23 @@ int handler_init(struct if_entry *entry)
 	return 0;
 }
 
-int handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
+int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 {
 	int err = 0;
 
-	handler_err_loop(err, netlink, entry, linkinfo);
+	if_handler_err_loop(err, netlink, entry, linkinfo);
 	return err;
 }
 
-int handler_scan(struct if_entry *entry)
+int if_handler_scan(struct if_entry *entry)
 {
 	int err = 0;
 
-	handler_err_loop(err, scan, entry);
+	if_handler_err_loop(err, scan, entry);
 	return err;
 }
 
-int handler_post(struct netns_entry *root)
+int if_handler_post(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
@@ -110,7 +110,7 @@ int handler_post(struct netns_entry *root)
 
 	for (ns = root; ns; ns = ns->next) {
 		for (entry = ns->ifaces; entry; entry = entry->next) {
-			handler_err_loop(err, post, entry, root);
+			if_handler_err_loop(err, post, entry, root);
 			if (err)
 				return err;
 		}
@@ -118,9 +118,9 @@ int handler_post(struct netns_entry *root)
 	return 0;
 }
 
-void handler_cleanup(struct if_entry *entry)
+void if_handler_cleanup(struct if_entry *entry)
 {
-	handler_loop(cleanup, entry);
+	if_handler_loop(cleanup, entry);
 
 	if (entry->handler_private)
 		free(entry->handler_private);

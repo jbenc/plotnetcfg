@@ -382,7 +382,7 @@ int netns_list(struct netns_entry **result, int supported)
 		return err;
 	if ((err = global_handler_post(*result)))
 		return err;
-	if ((err = handler_post(*result)))
+	if ((err = if_handler_post(*result)))
 		return err;
 	return 0;
 }

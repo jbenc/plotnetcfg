@@ -28,7 +28,7 @@ struct vlan_private {
 
 static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 
-static struct handler h_vlan = {
+static struct if_handler h_vlan = {
 	.driver = "802.1Q VLAN Support",
 	.private_size = sizeof(struct vlan_private),
 	.netlink = vlan_netlink,
@@ -36,7 +36,7 @@ static struct handler h_vlan = {
 
 void handler_vlan_register(void)
 {
-	handler_register(&h_vlan);
+	if_handler_register(&h_vlan);
 }
 
 static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)

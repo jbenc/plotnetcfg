@@ -50,7 +50,7 @@ static int bond_scan(struct if_entry *entry);
 static int bond_post(struct if_entry *entry, struct netns_entry *root);
 static void bond_cleanup(struct if_entry *entry);
 
-static struct handler h_bond = {
+static struct if_handler h_bond = {
 	.driver = "bonding",
 	.private_size = sizeof(struct bond_private),
 	.netlink = bond_netlink,
@@ -61,7 +61,7 @@ static struct handler h_bond = {
 
 void handler_bond_register(void)
 {
-	handler_register(&h_bond);
+	if_handler_register(&h_bond);
 }
 
 static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo)

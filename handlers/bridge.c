@@ -24,13 +24,13 @@
 
 static int bridge_scan(struct if_entry *entry);
 
-static struct handler h_bridge = {
+static struct if_handler h_bridge = {
 	.scan = bridge_scan,
 };
 
 void handler_bridge_register(void)
 {
-	handler_register(&h_bridge);
+	if_handler_register(&h_bridge);
 }
 
 static int bridge_scan(struct if_entry *entry)

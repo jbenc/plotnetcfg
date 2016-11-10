@@ -93,10 +93,10 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		dest->driver = strdup("unknown driver, please report a bug");
 	}
 
-	if ((err = handler_init(dest)))
+	if ((err = if_handler_init(dest)))
 		goto err_driver;
 
-	if ((err = handler_netlink(dest, tb[IFLA_LINKINFO] ? linkinfo : NULL)))
+	if ((err = if_handler_netlink(dest, tb[IFLA_LINKINFO] ? linkinfo : NULL)))
 		if (err != ENOENT)
 			goto err_driver;
 
@@ -203,7 +203,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 			return err;
 		if ((err = fill_if_addr(entry, ainfo)))
 			return err;
-		if ((err = handler_scan(entry)))
+		if ((err = if_handler_scan(entry)))
 			return err;
 		if (!ptr)
 			*result = entry;
@@ -226,7 +226,7 @@ static void if_addr_destruct(struct if_addr_entry *entry)
 
 static void if_list_destruct(struct if_entry *entry)
 {
-	handler_cleanup(entry);
+	if_handler_cleanup(entry);
 	free(entry->internal_ns);
 	free(entry->if_name);
 	free(entry->edge_label);

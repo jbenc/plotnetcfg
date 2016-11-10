@@ -37,8 +37,8 @@ struct rtattr;
  *   4. cleanup - destroy private structure. handler_private itself will be
  *      freed automatically.
  */
-struct handler {
-	struct handler *next;
+struct if_handler {
+	struct if_handler *next;
 	const char *driver;
 	size_t private_size;
 	int (*netlink)(struct if_entry *entry, struct rtattr **linkinfo);
@@ -47,12 +47,12 @@ struct handler {
 	void (*cleanup)(struct if_entry *entry);
 };
 
-void handler_register(struct handler *h);
-int handler_init(struct if_entry *entry);
-int handler_netlink(struct if_entry *entry, struct rtattr **linkinfo);
-int handler_scan(struct if_entry *entry);
-int handler_post(struct netns_entry *root);
-void handler_cleanup(struct if_entry *entry);
+void if_handler_register(struct if_handler *h);
+int if_handler_init(struct if_entry *entry);
+int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo);
+int if_handler_scan(struct if_entry *entry);
+int if_handler_post(struct netns_entry *root);
+void if_handler_cleanup(struct if_entry *entry);
 
 struct global_handler {
 	struct global_handler *next;

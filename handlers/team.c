@@ -50,7 +50,7 @@ static int team_scan(struct if_entry *entry);
 static int team_post(struct if_entry *entry, struct netns_entry *root);
 static void team_cleanup(struct if_entry *entry);
 
-static struct handler h_team = {
+static struct if_handler h_team = {
 	.driver = "team",
 	.private_size = sizeof(struct team_priv),
 	.scan = team_scan,
@@ -61,7 +61,7 @@ static struct handler h_team = {
 
 void handler_team_register(void)
 {
-	handler_register(&h_team);
+	if_handler_register(&h_team);
 }
 
 static int team_connect(struct if_entry *entry)

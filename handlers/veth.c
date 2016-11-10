@@ -27,7 +27,7 @@ struct netns_entry;
 static int veth_scan(struct if_entry *entry);
 static int veth_post(struct if_entry *entry, struct netns_entry *root);
 
-static struct handler h_veth = {
+static struct if_handler h_veth = {
 	.driver = "veth",
 	.scan = veth_scan,
 	.post = veth_post,
@@ -35,7 +35,7 @@ static struct handler h_veth = {
 
 void handler_veth_register(void)
 {
-	handler_register(&h_veth);
+	if_handler_register(&h_veth);
 }
 
 static int veth_scan(struct if_entry *entry)

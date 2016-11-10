@@ -39,7 +39,7 @@ struct vxlan_priv {
 static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 static int vxlan_post(struct if_entry *entry, struct netns_entry *root);
 
-static struct handler h_vxlan = {
+static struct if_handler h_vxlan = {
 	.driver = "vxlan",
 	.private_size = sizeof(struct vxlan_priv),
 	.netlink = vxlan_netlink,
@@ -50,7 +50,7 @@ static struct handler h_vxlan = {
 
 void handler_vxlan_register(void)
 {
-	handler_register(&h_vxlan);
+	if_handler_register(&h_vxlan);
 }
 
 static int vxlan_fill_addr(struct addr **addr, int ai_family, struct rtattr *rtattr)
