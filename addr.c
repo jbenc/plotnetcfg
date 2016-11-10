@@ -38,7 +38,8 @@ int addr_init(struct addr *dest, int family, int prefixlen, void *raw)
 	if (!inet_ntop(family, raw, buf, sizeof(buf)))
 		return errno;
 	len = strlen(buf);
-	snprintf(buf + len, sizeof(buf) - len, "/%d", prefixlen);
+	if (prefixlen >= 0)
+		snprintf(buf + len, sizeof(buf) - len, "/%d", prefixlen);
 	dest->formatted = strdup(buf);
 	if (!dest->formatted)
 		goto err_raw;
