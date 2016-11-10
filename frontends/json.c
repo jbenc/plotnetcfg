@@ -52,24 +52,20 @@ static json_t *label_properties_to_object(struct label_property *prop, unsigned 
 	return jobj;
 }
 
+static json_t *address_family(int family)
+{
+	switch (family) {
+		case AF_INET: return json_string("INET");
+		case AF_INET6: return json_string("INET6");
+	}
+	/* should not happen */
+	return json_string("unknown");
+}
+
 static json_t *address_to_obj(struct addr *addr)
 {
-	json_t *obj;
-	char *s;
-
-	obj = json_object();
-	switch (addr->family) {
-	case AF_INET:
-		s = "INET";
-		break;
-	case AF_INET6:
-		s = "INET6";
-		break;
-	default:
-		/* should not happen */
-		s = "unknown";
-	}
-	json_object_set_new(obj, "family", json_string(s));
+	json_t *obj = json_object();
+	json_object_set_new(obj, "family", address_family(addr->family));
 	json_object_set_new(obj, "address", json_string(addr->formatted));
 	return obj;
 }
