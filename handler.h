@@ -21,6 +21,10 @@ struct if_entry;
 struct netns_entry;
 struct rtattr;
 
+struct handler {
+	struct handler *next;
+};
+
 /* Only one handler for each driver allowed.
  * Generic handlers called for every interface are supported and are created
  * by setting driver to NULL. Generic handlers are not allowed to use
@@ -38,7 +42,7 @@ struct rtattr;
  *      freed automatically.
  */
 struct if_handler {
-	struct if_handler *next;
+	struct handler handler;
 	const char *driver;
 	size_t private_size;
 	int (*netlink)(struct if_entry *entry, struct rtattr **linkinfo);
@@ -55,7 +59,7 @@ int if_handler_post(struct netns_entry *root);
 void if_handler_cleanup(struct if_entry *entry);
 
 struct global_handler {
-	struct global_handler *next;
+	struct handler handler;
 	void (*init)(void);
 	int (*post)(struct netns_entry *root);
 	void (*cleanup)(struct netns_entry *root);

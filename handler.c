@@ -20,21 +20,30 @@
 #include "if.h"
 #include "netns.h"
 
-static struct if_handler *if_handlers = NULL;
-static struct if_handler *if_handlers_tail = NULL;
+struct handler_list {
+	struct handler *head, *tail;
+};
 
-static struct global_handler *ghandlers = NULL;
-static struct global_handler *ghandlers_tail = NULL;
+static struct handler_list if_handlers, global_handlers;
+
+void handler_register(struct handler_list *list, struct handler *h)
+{
+	h->next = NULL;
+	if (!list->head)
+		list->head = h;
+	else
+		list->tail->next = h;
+	list->tail = h;
+}
 
 void if_handler_register(struct if_handler *h)
 {
-	h->next = NULL;
-	if (!if_handlers) {
-		if_handlers = if_handlers_tail = h;
-		return;
-	}
-	if_handlers_tail->next = h;
-	if_handlers_tail = h;
+	handler_register(&if_handlers, (struct handler *) h);
+}
+
+void global_handler_register(struct global_handler *h)
+{
+	handler_register(&global_handlers, (struct handler *) h);
 }
 
 static int driver_match(struct if_handler *h, struct if_entry *e)
@@ -42,40 +51,25 @@ static int driver_match(struct if_handler *h, struct if_entry *e)
 	return !h->driver || (e->driver && !strcmp(h->driver, e->driver));
 }
 
-#define if_handler_err_loop(err, method, entry, ...)				\
-	{								\
-		struct if_handler *ptr;					\
-									\
-		for (ptr = if_handlers; ptr; ptr = ptr->next) {		\
-			if (!ptr->method || !driver_match(ptr, entry))	\
-				continue;				\
-			err = ptr->method(entry, ##__VA_ARGS__);	\
-			if (err)					\
-				break;					\
-		}							\
-	}
+#define for_each_handler(ptr, list) \
+    for (ptr = (void *) (list).head; ptr; ptr = (void *) ptr->handler.next)
 
-#define if_handler_loop(method, entry, ...)				\
-	{								\
-		struct if_handler *ptr;					\
-									\
-		for (ptr = if_handlers; ptr; ptr = ptr->next) {		\
-			if (!ptr->method || !driver_match(ptr, entry))	\
-				continue;				\
-			ptr->method(entry, ##__VA_ARGS__);		\
-		}							\
-	}
+#define handler_callback(handler, callback, ...)				\
+	((handler)->callback ? (handler)->callback(__VA_ARGS__) : 0)
+
+#define if_handler_callback(handler, callback, entry, ...)				\
+	(driver_match(handler, entry) ? handler_callback(handler, callback, entry, ##__VA_ARGS__) : 0)
 
 int if_handler_init(struct if_entry *entry)
 {
-	struct if_handler *ptr;
+	struct if_handler *h;
 
-	for (ptr = if_handlers; ptr; ptr = ptr->next) {
-		if (!ptr->driver || strcmp(ptr->driver, entry->driver))
+	for_each_handler(h, if_handlers) {
+		if (!h->driver || strcmp(h->driver, entry->driver))
 			continue;
 
-		if (ptr->private_size) {
-			entry->handler_private = calloc(1, ptr->private_size);
+		if (h->private_size) {
+			entry->handler_private = calloc(1, h->private_size);
 			if (!entry->handler_private)
 				return ENOMEM;
 		}
@@ -88,69 +82,61 @@ int if_handler_init(struct if_entry *entry)
 
 int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 {
-	int err = 0;
+	struct if_handler *h;
+	int err;
 
-	if_handler_err_loop(err, netlink, entry, linkinfo);
-	return err;
+	for_each_handler(h, if_handlers)
+		if ((err = if_handler_callback(h, netlink, entry, linkinfo)))
+			return err;
+
+	return 0;
 }
 
 int if_handler_scan(struct if_entry *entry)
 {
-	int err = 0;
+	struct if_handler *h;
+	int err;
 
-	if_handler_err_loop(err, scan, entry);
-	return err;
+	for_each_handler(h, if_handlers)
+		if ((err = if_handler_callback(h, scan, entry)))
+			return err;
+
+	return 0;
 }
 
 int if_handler_post(struct netns_entry *root)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
-	int err = 0;
+	struct if_handler *h;
+	int err;
 
-	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
-			if_handler_err_loop(err, post, entry, root);
-			if (err)
-				return err;
-		}
-	}
+	for (ns = root; ns; ns = ns->next)
+		for (entry = ns->ifaces; entry; entry = entry->next)
+			for_each_handler(h, if_handlers)
+				if ((err = if_handler_callback(h, post, entry, root)))
+					return err;
+
 	return 0;
 }
 
 void if_handler_cleanup(struct if_entry *entry)
 {
-	if_handler_loop(cleanup, entry);
+	struct if_handler *h;
+
+	for_each_handler(h, if_handlers)
+		if_handler_callback(h, cleanup, entry);
 
 	if (entry->handler_private)
 		free(entry->handler_private);
 }
 
-#define ghandler_loop(method, ...)				\
-	{								\
-		struct global_handler *ptr;				\
-									\
-		for (ptr = ghandlers; ptr; ptr = ptr->next) {		\
-			if (!ptr->method)	\
-				continue;				\
-			ptr->method(__VA_ARGS__);			\
-		}							\
-	}
-
-void global_handler_register(struct global_handler *h)
-{
-	h->next = NULL;
-	if (!ghandlers) {
-		ghandlers = ghandlers_tail = h;
-		return;
-	}
-	ghandlers_tail->next = h;
-	ghandlers_tail = h;
-}
-
 void global_handler_init(void)
 {
-	ghandler_loop(init);
+	struct global_handler *h;
+
+	for_each_handler(h, global_handlers)
+		handler_callback(h, init);
 }
 
 int global_handler_post(struct netns_entry *root)
@@ -158,17 +144,17 @@ int global_handler_post(struct netns_entry *root)
 	struct global_handler *h;
 	int err;
 
-	for (h = ghandlers; h; h = h->next) {
-		if (!h->post)
-			continue;
-		err = h->post(root);
-		if (err)
+	for_each_handler(h, global_handlers)
+		if ((err = handler_callback(h, post, root)))
 			return err;
-	}
+
 	return 0;
 }
 
 void global_handler_cleanup(struct netns_entry *root)
 {
-	ghandler_loop(cleanup, root);
+	struct global_handler *h;
+
+	for_each_handler(h, global_handlers)
+		handler_callback(h, cleanup, root);
 }
