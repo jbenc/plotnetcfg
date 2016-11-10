@@ -715,7 +715,7 @@ static struct arg_option options[] = {
 	  .help = "path to openvswitch database" },
 };
 
-void handler_ovs_register(void)
+void handler_openvswitch_register(void)
 {
 	db = OVS_DB_DEFAULT;
 	arg_register_batch(options, ARRAY_SIZE(options));
