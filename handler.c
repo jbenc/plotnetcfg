@@ -126,11 +126,6 @@ void handler_cleanup(struct if_entry *entry)
 		free(entry->handler_private);
 }
 
-void handler_generic_cleanup(struct if_entry *entry)
-{
-	free(entry->handler_private);
-}
-
 #define ghandler_loop(method, ...)				\
 	{								\
 		struct global_handler *ptr;				\
