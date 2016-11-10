@@ -117,7 +117,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	global_handler_init();
+	if ((err = global_handler_init())) {
+		fprintf(stderr, "Initialization failed: %s\n", strerror(err));
+		exit(1);
+	}
 	if ((err = netns_list(&root, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
 		exit(1);

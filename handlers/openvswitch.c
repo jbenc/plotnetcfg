@@ -685,17 +685,18 @@ static void destruct_bridge(struct ovs_bridge *br)
 	list_free(br->ports, (destruct_f)destruct_port);
 }
 
-static void ovs_global_init(void)
+static int ovs_global_init(void)
 {
 	struct nl_handle hnd;
+	int err;
 
-	if (genl_open(&hnd)) {
+	if ((err = genl_open(&hnd))) {
 		vport_genl_id = 0;
-		return;
+		return 0; /* intentionally ignored */
 	}
 	vport_genl_id = genl_family_id(&hnd, OVS_VPORT_FAMILY);
 	nl_close(&hnd);
-	return;
+	return 0;
 }
 
 static void ovs_global_cleanup(_unused struct netns_entry *root)

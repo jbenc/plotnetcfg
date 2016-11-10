@@ -156,12 +156,16 @@ void netns_handler_cleanup(struct netns_entry *entry)
 		handler_callback(h, cleanup, entry);
 }
 
-void global_handler_init(void)
+int global_handler_init(void)
 {
 	struct global_handler *h;
+	int err;
 
 	for_each_handler(h, global_handlers)
-		handler_callback(h, init);
+		if ((err = handler_callback(h, init)))
+			return err;
+
+	return 0;
 }
 
 int global_handler_post(struct netns_entry *root)

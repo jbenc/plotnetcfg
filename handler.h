@@ -70,13 +70,13 @@ void netns_handler_cleanup(struct netns_entry *entry);
 
 struct global_handler {
 	struct handler handler;
-	void (*init)(void);
+	int (*init)(void);
 	int (*post)(struct netns_entry *root);
 	void (*cleanup)(struct netns_entry *root);
 };
 
 void global_handler_register(struct global_handler *h);
-void global_handler_init(void);
+int global_handler_init(void);
 int global_handler_post(struct netns_entry *root);
 void global_handler_cleanup(struct netns_entry *root);
 
