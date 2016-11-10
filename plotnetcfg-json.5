@@ -60,6 +60,11 @@ warnings
 If present, an array of strings. Contains error messages encountered when
 gathering data in the given name space.
 
+.TP
+routes
+.I (array)
+An array of existing routing tables.
+
 .SS Interface object fields
 
 .TP
@@ -193,6 +198,92 @@ peer
 .I (object)
 If present, the peer address corresponding to this address. It's of the
 address object type but cannot contain futher peer field.
+
+.SS Routing table object fields
+
+.TP
+name
+.I (string)
+The well-known name of the table, if there is such.
+
+.TP
+routes
+.I (array)
+An array of route objects.
+
+.SS Route object fields
+
+.TP
+destination
+.I (string)
+Formatted prefix of the route destination.
+
+.TP
+family
+.I (string)
+A family of all addresses in this route. Currently only "INET" or "INET6".
+
+.TP
+gateway
+.I (string)
+Formatted address of the gateway, if this is a next-hop route.
+
+.TP
+iif
+.I (string)
+Interface id of the input interface, if any.
+
+.TP
+metrics
+.I (object)
+Associative array of integers, containing all integer metrics that kernel
+reports, if any. Keys are one of the following: mtu, window, rtt, rttvar,
+sshthresh, cwnd, advmss, reordering, hoplimit, initcwnd, features, rto_min,
+initrwnd, quickack.
+
+.TP
+oif
+.I (string)
+Interface id of the output interface, if any.
+
+.TP
+priority
+.I (integer)
+Kernel reported priority of this route.
+
+.TP
+protocol
+.I (string)
+An origin of the route. Currently one of redirect, kernel, boot, static, gated,
+ra, mrt, zebra, bird, dnrouted, xorp, ntk, dhcp, mrouted or babel, but others
+may be added in the future.
+
+.TP
+scope
+.I (string)
+A scope of the route.
+
+.TP
+source
+.I (string)
+A formatted source prefix.
+
+.TP
+preffered-source
+.I (string)
+A formatted preffered source address.
+
+.TP
+tos
+.I (integer)
+The type of service.
+
+.TP
+type
+.I (string)
+Route type, one of the following: unspec, unicast, local, broadcast, anycast,
+multicast, blackhole, unreachable, prohibit, throw, nat. Others may be added in
+the future, without breaking the format.
 
 .SH SEE ALSO
 .BR plotnetcfg (8)

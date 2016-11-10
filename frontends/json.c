@@ -24,6 +24,7 @@
 #include "../if.h"
 #include "../label.h"
 #include "../netns.h"
+#include "../route.h"
 #include "../utils.h"
 #include "../version.h"
 
@@ -173,6 +174,62 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 	return ifarr;
 }
 
+static json_t *routes_to_array(struct route *rte)
+{
+	json_t *ifarr, *ifobj;
+	struct rtmetric *rtm;
+
+	ifarr = json_array();
+	for (; rte; rte = rte->next) {
+		ifobj = json_object();
+		if (rte->dst.family)
+			json_object_set_new(ifobj, "destination", json_string(rte->dst.formatted));
+		json_object_set_new(ifobj, "family", address_family(rte->family));
+		if (rte->gw.family)
+			json_object_set_new(ifobj, "gateway", json_string(rte->gw.formatted));
+		if (rte->iif)
+			json_object_set_new(ifobj, "iif", json_string(ifid(rte->iif)));
+		if (rte->metrics) {
+			json_t *rtmetrics = json_object();
+
+			for (rtm = rte->metrics; rtm; rtm = rtm->next)
+				json_object_set_new(rtmetrics, route_metric(rtm->type), json_integer(rtm->value));
+
+			json_object_set_new(ifobj, "metrics", rtmetrics);
+		}
+		if (rte->oif)
+			json_object_set_new(ifobj, "oif", json_string(ifid(rte->oif)));
+		json_object_set_new(ifobj, "priority", json_integer(rte->priority));
+		json_object_set_new(ifobj, "protocol", json_string(route_protocol(rte->protocol)));
+		json_object_set_new(ifobj, "scope", json_string(route_scope(rte->scope)));
+		if (rte->src.family)
+			json_object_set_new(ifobj, "source", json_string(rte->src.formatted));
+		if (rte->prefsrc.family)
+			json_object_set_new(ifobj, "preffered-source", json_string(rte->prefsrc.formatted));
+		json_object_set_new(ifobj, "tos", json_integer(rte->tos));
+		json_object_set_new(ifobj, "type", json_string(route_type(rte->type)));
+
+		json_array_append_new(ifarr, ifobj);
+	}
+
+	return ifarr;
+}
+
+static json_t *rtables_to_array(struct rtable *rt)
+{
+	json_t *ifarr, *ifobj;
+
+	ifarr = json_object();
+	for (; rt; rt = rt->next) {
+		ifobj = json_object();
+		json_object_set_new(ifobj, "name", json_string(route_table(rt->id)));
+		json_object_set_new(ifobj, "routes", routes_to_array(rt->routes));
+		json_object_set_new(ifarr, rtid(rt), ifobj);
+	}
+
+	return ifarr;
+}
+
 static void json_output(FILE *f, struct netns_entry *root, struct output_entry *output_entry)
 {
 	struct netns_entry *entry;
@@ -191,6 +248,7 @@ static void json_output(FILE *f, struct netns_entry *root, struct output_entry *
 		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
 		json_object_set_new(ns, "interfaces", interfaces_to_array(entry->ifaces, output_entry));
+		json_object_set_new(ns, "routes", rtables_to_array(entry->rtables));
 		if (entry->warnings)
 			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));
 		json_object_set_new(ns_list, nsid(entry), ns);
