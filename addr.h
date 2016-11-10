@@ -17,6 +17,8 @@
 #ifndef _ADDR_H
 #define _ADDR_H
 
+#include <arpa/inet.h>
+
 struct ifaddrmsg;
 struct rtattr;
 
@@ -39,6 +41,15 @@ int addr_init_netlink(struct addr *dest, const struct ifaddrmsg *ifa,
 
 /* dest must point to at least 16 bytes long buffer */
 int addr_parse_raw(void *dest, const char *str);
+
+static inline int addr_max_prefix_len(int ai_family)
+{
+	switch (ai_family) {
+		case AF_INET: return 32;
+		case AF_INET6: return 128;
+	}
+	return 0;
+}
 
 void addr_destruct(struct addr *addr);
 

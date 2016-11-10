@@ -64,7 +64,7 @@ static int vxlan_fill_addr(struct addr **addr, int ai_family, struct rtattr *rta
 	if (!*addr)
 		return ENOMEM;
 
-	if ((err = addr_init(*addr, ai_family, ai_family == AF_INET ? 32 : 128, RTA_DATA(rtattr)))) {
+	if ((err = addr_init(*addr, ai_family, addr_max_prefix_len(ai_family), RTA_DATA(rtattr)))) {
 		free(*addr);
 		*addr = NULL;
 		return err;

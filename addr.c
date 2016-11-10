@@ -15,7 +15,6 @@
  */
 
 #include "addr.h"
-#include <arpa/inet.h>
 #include <errno.h>
 #include <linux/rtnetlink.h>
 #include <stdio.h>
