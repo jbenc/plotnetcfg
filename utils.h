@@ -18,6 +18,7 @@
 
 struct if_entry;
 struct netns_entry;
+struct rtable;
 
 #define _unused __attribute__((unused))
 
@@ -30,5 +31,6 @@ void list_free(void *list, destruct_f destruct);
 char *ifstr(struct if_entry *entry);
 char *ifid(struct if_entry *entry);
 char *nsid(struct netns_entry *entry);
+char *rtid(struct rtable *rt);
 
 #endif

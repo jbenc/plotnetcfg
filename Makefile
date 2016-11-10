@@ -8,7 +8,7 @@ endif
 CFLAGS=-std=c99 -D_GNU_SOURCE -W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 
 OBJECTS=addr args ethtool frontend handler if label main master \
-        match netlink netns sysfs tunnel utils
+        match netlink netns route sysfs tunnel utils
 HANDLERS=bond bridge iov openvswitch team veth vlan vxlan
 FRONTENDS=dot json
 

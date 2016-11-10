@@ -21,6 +21,7 @@
 struct if_entry;
 struct label;
 struct netns_entry;
+struct route;
 
 struct netns_id {
 	struct netns_id *next;
@@ -39,6 +40,7 @@ struct netns_entry {
 	pid_t pid;
 	int fd;
 	struct netns_id *ids;
+	struct rtable *rtables;
 };
 
 int netns_list(struct netns_entry **result, int supported);

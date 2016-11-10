@@ -97,4 +97,26 @@ enum {
 #define IFLA_BOND_MAX	(__IFLA_BOND_MAX - 1)
 #endif
 
+#ifndef RTAX_QUICKACK
+#define RTAX_QUICKACK	15
+#endif
+
+#ifndef RTAX_CC_ALGO
+#define RTAX_CC_ALGO	16
+#endif
+
+#if RTAX_MAX < RTAX_CC_ALGO
+#undef RTAX_MAX
+#define RTAX_MAX RTAX_CC_ALGO
+#endif
+
+#ifndef RTPROT_MROUTED
+#define RTPROT_MROUTED	17
+#endif
+
+#ifndef RTPROT_BABEL
+#define RTPROT_BABEL	42
+#endif
+
+
 #endif

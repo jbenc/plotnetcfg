@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include "if.h"
 #include "netns.h"
+#include "route.h"
 
 struct generic_list {
 	struct generic_list *next;
@@ -73,5 +74,13 @@ char *nsid(struct netns_entry *entry)
 		return "/";
 
 	snprintf(buf, sizeof(buf), "%s/", entry->name);
+	return buf;
+}
+
+char *rtid(struct rtable *rt)
+{
+	static char buf [32];
+
+	snprintf(buf, sizeof(buf), "%u", rt->id);
 	return buf;
 }
