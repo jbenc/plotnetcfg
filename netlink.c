@@ -112,10 +112,14 @@ int nl_recv(struct nl_handle *hnd, struct nlmsg_entry **dest, int is_dump)
 		iov.iov_base = buf;
 		iov.iov_len = sizeof(buf);
 		len = recvmsg(hnd->fd, &msg, 0);
-		if (len < 0)
-			return errno;
-		if (!len)
-			return EPIPE;
+		if (len < 0) {
+			err = errno;
+			goto err_out;
+		}
+		if (!len) {
+			err = EPIPE;
+			goto err_out;
+		}
 		if (sa.nl_pid) {
 			/* not from the kernel */
 			continue;
