@@ -205,7 +205,7 @@ static json_t *routes_to_array(struct route *rte)
 		if (rte->src.family)
 			json_object_set_new(ifobj, "source", json_string(rte->src.formatted));
 		if (rte->prefsrc.family)
-			json_object_set_new(ifobj, "preffered-source", json_string(rte->prefsrc.formatted));
+			json_object_set_new(ifobj, "preferred-source", json_string(rte->prefsrc.formatted));
 		json_object_set_new(ifobj, "tos", json_integer(rte->tos));
 		json_object_set_new(ifobj, "type", json_string(route_type(rte->type)));
 
