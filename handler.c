@@ -150,7 +150,7 @@ int netns_handler_scan(struct netns_entry *entry)
 
 void netns_handler_cleanup(struct netns_entry *entry)
 {
-	struct global_handler *h;
+	struct netns_handler *h;
 
 	for_each_handler(h, netns_handlers)
 		handler_callback(h, cleanup, entry);
