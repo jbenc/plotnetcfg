@@ -22,6 +22,8 @@ struct rtable;
 
 #define _unused __attribute__((unused))
 
+#define OFFSETOF(s, i) ((size_t) &((s *)0)->i)
+#define SKIP_BACK(s, i, p) ((s *)((char *)p - OFFSETOF(s, i)))
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof(*a))
 
 
