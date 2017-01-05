@@ -25,19 +25,19 @@
 #include "../utils.h"
 #include "../version.h"
 
-static void output_label(FILE *f, struct label *list)
+static void output_label(FILE *f, struct list *labels)
 {
 	struct label *ptr;
 
-	for (ptr = list; ptr; ptr = ptr->next)
+	list_for_each(ptr, *labels)
 		fprintf(f, "\\n%s", ptr->text);
 }
 
-static void output_label_properties(FILE *f, struct label_property *list, unsigned int prop_mask)
+static void output_label_properties(FILE *f, struct list *properties, unsigned int prop_mask)
 {
 	struct label_property *ptr;
 
-	for (ptr = list; ptr; ptr = ptr->next)
+	list_for_each(ptr, *properties)
 		if (label_prop_match_mask(ptr->type, prop_mask))
 			fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
 }
@@ -67,7 +67,7 @@ static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_ma
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
-		output_label_properties(f, ptr->prop, prop_mask);
+		output_label_properties(f, &ptr->properties, prop_mask);
 		output_mtu(f, ptr);
 		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {
 			output_addresses(f, &ptr->addr);
@@ -130,11 +130,11 @@ static void output_warnings(FILE *f, struct list *netns_list)
 	int was_label = 0;
 
 	list_for_each(ns, *netns_list) {
-		if (ns->warnings) {
+		if (!list_empty(ns->warnings)) {
 			if (!was_label)
 				fprintf(f, "label=\"");
 			was_label = 1;
-			output_label(f, ns->warnings);
+			output_label(f, &ns->warnings);
 		}
 	}
 	if (was_label) {

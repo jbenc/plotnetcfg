@@ -94,11 +94,11 @@ static int process(struct if_entry *entry, struct list *netns_list)
 	int err;
 	struct match_desc match;
 
-	match_init(&match);
-	match.netns_list = netns_list;
-	match.exclude = entry;
-
 	if (!entry->master && entry->master_index) {
+		match_init(&match);
+		match.netns_list = netns_list;
+		match.exclude = entry;
+
 		if ((err = match_if(&match, match_master, entry)))
 			return err;
 		if ((err = err_msg(&match, "master", entry)))
@@ -107,6 +107,10 @@ static int process(struct if_entry *entry, struct list *netns_list)
 			return err;
 	}
 	if (!entry->link && entry->link_index) {
+		match_init(&match);
+		match.netns_list = netns_list;
+		match.exclude = entry;
+
 		if ((err = match_if(&match, match_link, entry)))
 			return err;
 		if ((err = err_msg(&match, "link", entry)))

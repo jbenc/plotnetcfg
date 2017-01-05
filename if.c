@@ -171,6 +171,7 @@ static struct if_entry *if_alloc(void)
 	list_init(&entry->addr);
 	list_init(&entry->rev_master);
 	list_init(&entry->rev_link);
+	list_init(&entry->properties);
 	entry->link_netnsid = -1;
 	entry->peer_netnsid = -1;
 	mac_addr_init(&entry->mac_addr);
@@ -228,7 +229,7 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->if_name);
 	free(entry->edge_label);
 	mac_addr_destruct(&entry->mac_addr);
-	label_free_property(entry->prop);
+	label_free_property(&entry->properties);
 	list_free(&entry->addr, (destruct_f) if_addr_destruct);
 }
 

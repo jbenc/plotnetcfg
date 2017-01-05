@@ -20,7 +20,6 @@
 #include "label.h"
 #include "list.h"
 
-struct label;
 struct netns_entry;
 
 struct if_addr {
@@ -41,7 +40,7 @@ struct if_entry {
 	int mtu;
 	char *if_name;
 	char *driver;
-	struct label_property *prop;
+	struct list properties;
 	unsigned int master_index;
 	struct if_entry *master;
 	struct if_entry *active_slave;
@@ -79,7 +78,7 @@ int if_add_warning(struct if_entry *entry, char *fmt, ...);
 #define IF_PROP_STATE	1
 #define IF_PROP_CONFIG	2
 
-#define if_add_state(entry, key, fmt, ...) label_add_property(&(entry)->prop, IF_PROP_STATE, key, fmt, ##__VA_ARGS__)
-#define if_add_config(entry, key, fmt, ...) label_add_property(&(entry)->prop, IF_PROP_CONFIG, key, fmt, ##__VA_ARGS__)
+#define if_add_state(entry, key, fmt, ...) label_add_property(&(entry)->properties, IF_PROP_STATE, key, fmt, ##__VA_ARGS__)
+#define if_add_config(entry, key, fmt, ...) label_add_property(&(entry)->properties, IF_PROP_CONFIG, key, fmt, ##__VA_ARGS__)
 
 #endif

@@ -33,7 +33,7 @@ struct netns_id {
 struct netns_entry {
 	struct node n;
 	struct list ifaces;
-	struct label *warnings;
+	struct list warnings;
 	long kernel_id;
 	/* name is NULL for root name space, for other name spaces it
 	 * contains human recognizable identifier */

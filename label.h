@@ -16,23 +16,25 @@
 #ifndef _LABEL_H
 #define _LABEL_H
 
+#include "list.h"
+
 struct label {
-	struct label *next;
+	struct node n;
 	char *text;
 };
 
 struct label_property {
-	struct label_property *next;
+	struct node n;
 	int type;
 	char *key, *value;
 };
 
-int label_add(struct label **list, char *fmt, ...);
-void label_free(struct label *list);
+int label_add(struct list *labels, char *fmt, ...);
+void label_free(struct list *labels);
 
-int label_add_property(struct label_property **list, int type,
+int label_add_property(struct list *properties, int type,
 		       const char *key, const char *fmt, ...);
-void label_free_property(struct label_property *list);
+void label_free_property(struct list *properties);
 #define label_prop_match_mask(type, mask) (((type) & (mask)) > 0)
 
 #endif

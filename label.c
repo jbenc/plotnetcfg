@@ -21,10 +21,10 @@
 #include <string.h>
 #include "list.h"
 
-int label_add(struct label **list, char *fmt, ...)
+int label_add(struct list *labels, char *fmt, ...)
 {
 	va_list ap;
-	struct label *new, *ptr = *list;
+	struct label *new;
 	int err = ENOMEM;
 
 	va_start(ap, fmt);
@@ -37,13 +37,7 @@ int label_add(struct label **list, char *fmt, ...)
 	}
 
 	err = 0;
-	if (!ptr) {
-		*list = new;
-		goto out;
-	}
-	while (ptr->next)
-		ptr = ptr->next;
-	ptr->next = new;
+	list_append(labels, node(new));
 out:
 	va_end(ap);
 	return err;
@@ -54,12 +48,12 @@ static void label_destruct(struct label *item)
 	free(item->text);
 }
 
-void label_free(struct label *list)
+void label_free(struct list *labels)
 {
-	slist_free(list, (destruct_f)label_destruct);
+	list_free(labels, (destruct_f)label_destruct);
 }
 
-int label_add_property(struct label_property **prop, int type,
+int label_add_property(struct list *properties, int type,
 		       const char *key, const char *fmt, ...)
 {
 	va_list ap;
@@ -80,8 +74,7 @@ int label_add_property(struct label_property **prop, int type,
 	}
 
 	new->type = type;
-	new->next = *prop;
-	*prop = new;
+	list_append(properties, node(new));
 	return 0;
 
 out_key:
@@ -99,7 +92,7 @@ static void label_property_destruct(struct label_property *prop)
 	free(prop->value);
 }
 
-void label_free_property(struct label_property *list)
+void label_free_property(struct list *properties)
 {
-	slist_free(list, (destruct_f)label_property_destruct);
+	list_free(properties, (destruct_f)label_property_destruct);
 }

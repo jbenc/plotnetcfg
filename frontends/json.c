@@ -28,28 +28,26 @@
 #include "../utils.h"
 #include "../version.h"
 
-static json_t *label_to_array(struct label *entry)
+static json_t *label_to_array(struct list *labels)
 {
 	json_t *arr;
+	struct label *entry;
 
 	arr = json_array();
-	while (entry) {
+	list_for_each(entry, *labels)
 		json_array_append_new(arr, json_string(entry->text));
-		entry = entry->next;
-	}
 	return arr;
 }
 
-static json_t *label_properties_to_object(struct label_property *prop, unsigned int prop_mask)
+static json_t *label_properties_to_object(struct list *properties, unsigned int prop_mask)
 {
 	json_t *jobj;
+	struct label_property *prop;
 
 	jobj = json_object();
-	while (prop) {
+	list_for_each(prop, *properties)
 		if (label_prop_match_mask(prop->type, prop_mask))
 			json_object_set_new(jobj, prop->key, json_string(prop->value));
-		prop = prop->next;
-	}
 	return jobj;
 }
 
@@ -113,7 +111,7 @@ static json_t *interfaces_to_array(struct list *list, struct output_entry *outpu
 		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
 		json_object_set_new(ifobj, "name", json_string(entry->if_name));
 		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
-		json_object_set_new(ifobj, "info", label_properties_to_object(entry->prop, output_entry->print_mask));
+		json_object_set_new(ifobj, "info", label_properties_to_object(&entry->properties, output_entry->print_mask));
 		if (label_prop_match_mask(IF_PROP_CONFIG, output_entry->print_mask)) {
 			json_object_set_new(ifobj, "addresses", addresses_to_array(&entry->addr));
 			json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
@@ -250,8 +248,8 @@ static void json_output(FILE *f, struct list *netns_list, struct output_entry *o
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
 		json_object_set_new(ns, "interfaces", interfaces_to_array(&entry->ifaces, output_entry));
 		json_object_set_new(ns, "routes", rtables_to_array(&entry->rtables));
-		if (entry->warnings)
-			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));
+		if (!list_empty(entry->warnings))
+			json_object_set_new(ns, "warnings", label_to_array(&entry->warnings));
 		json_object_set_new(ns_list, nsid(entry), ns);
 	}
 	json_object_set_new(output, "namespaces", ns_list);

@@ -73,6 +73,19 @@ static struct netns_entry *netns_check_duplicate(struct list *netns_list,
 	return NULL;
 }
 
+static struct netns_entry *netns_create()
+{
+	struct netns_entry *ns;
+
+	ns = calloc(sizeof(struct netns_entry), 1);
+	if (!ns)
+		return NULL;
+
+	list_init(&ns->ifaces);
+	list_init(&ns->warnings);
+	return ns;
+}
+
 static int netns_get_var_entry(struct netns_entry **result,
 			       struct list *netns_list,
 			       const char *name)
@@ -82,7 +95,7 @@ static int netns_get_var_entry(struct netns_entry **result,
 	long kernel_id;
 	int err;
 
-	*result = entry = calloc(sizeof(struct netns_entry), 1);
+	*result = entry = netns_create();
 	if (!entry)
 		return ENOMEM;
 
@@ -136,18 +149,6 @@ static void netns_proc_entry_set_name(struct netns_entry *entry,
 	entry->name = strdup(buf);
 	if (!entry->name)
 		entry->name = "?";
-}
-
-static struct netns_entry *netns_create()
-{
-	struct netns_entry *ns;
-
-	ns = calloc(sizeof(struct netns_entry), 1);
-	if (!ns)
-		return NULL;
-
-	list_init(&ns->ifaces);
-	return ns;
 }
 
 static int netns_get_proc_entry(struct netns_entry **result,
