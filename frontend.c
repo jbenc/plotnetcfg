@@ -22,18 +22,16 @@
 #include "if.h"
 #include "utils.h"
 
-static struct frontend *frontends = NULL;
-static struct frontend *frontends_tail = NULL;
-static int used_default_format = 0;
-
 static struct output_entry default_output = {
-	.next = NULL,
 	.format = "dot",
 	.file = NULL,
 	.print_mask = -1U,
 };
 
-static struct output_entry *output = NULL;
+static int used_default_format = 0;
+
+static DECLARE_LIST(outputs);
+static DECLARE_LIST(frontends);
 
 static int add_output(char *format)
 {
@@ -51,8 +49,7 @@ static int add_output(char *format)
 		return ENOMEM;
 	}
 
-	out->next = output;
-	output = out;
+	list_prepend(&outputs, node(out));
 
 	return 0;
 }
@@ -71,7 +68,7 @@ static int require_format()
 {
 	int err;
 
-	if (!output) {
+	if (list_empty(outputs)) {
 		if ((err = add_output(default_output.format)))
 			return err;
 		used_default_format = 1;
@@ -83,16 +80,19 @@ static int require_format()
 static int set_output(char *arg)
 {
 	int err;
+	struct output_entry *head;
 
 	if ((err = require_format()))
 		return err;
 
+	head = list_head(outputs);
 	/* Multiple --outputs for one --format: clone last output */
-	if (output->file && (err = add_output(output->format)))
+	if (head->file && (err = add_output(head->format)))
 		return err;
 
-	output->file = strdup(arg);
-	if (!output->file)
+	head = list_head(outputs);
+	head->file = strdup(arg);
+	if (!head->file)
 		return ENOMEM;
 
 	return 0;
@@ -101,11 +101,13 @@ static int set_output(char *arg)
 static int set_nostate()
 {
 	int err;
+	struct output_entry *head;
 
 	if ((err = require_format()))
 		return err;
 
-	output->print_mask &= ~IF_PROP_STATE;
+	head = list_head(outputs);
+	head->print_mask &= ~IF_PROP_STATE;
 	return 0;
 }
 
@@ -114,7 +116,7 @@ static int print_formats(_unused char *arg)
 	struct frontend *f;
 
 	printf("Available output formats:\n");
-	for (f = frontends; f; f = f->next)
+	list_for_each(f, frontends)
 		printf("\t%s - %s\n", f->format, f->desc);
 	return 1;
 }
@@ -145,25 +147,19 @@ void frontend_init(void)
 
 void frontend_register(struct frontend *f)
 {
-	f->next = NULL;
-	if (!frontends) {
-		frontends = frontends_tail = f;
-		return;
-	}
-	frontends_tail->next = f;
-	frontends_tail = f;
+	list_append(&frontends, node(f));
 }
 
 int frontend_output(struct netns_entry *root)
 {
 	struct frontend *f;
-	struct output_entry *out, *head;
+	struct output_entry *out;
 	FILE *file;
 
-	head = output ? : &default_output;
+	require_format();
 
-	for (out = head; out; out = out->next) {
-		for (f = frontends; f; f = f->next) {
+	list_for_each(out, outputs) {
+		list_for_each(f, frontends) {
 			if (!strcmp(f->format, out->format)) {
 				out->frontend = f;
 				break;
@@ -173,7 +169,7 @@ int frontend_output(struct netns_entry *root)
 			return EINVAL;
 	}
 
-	for (out = head; out; out = out->next) {
+	list_for_each(out, outputs) {
 		if (out->file && strcmp("-", out->file)) {
 			file = fopen(out->file, "w");
 			if (!file)
@@ -192,13 +188,11 @@ int frontend_output(struct netns_entry *root)
 
 void frontend_cleanup()
 {
-	struct output_entry *next;
+	struct output_entry *out;
 
-	while (output) {
-		next = output->next;
-		free(output->format);
-		free(output->file);
-		free(output);
-		output = next;
+	while ((out = list_pop(&outputs))) {
+		free(out->format);
+		free(out->file);
+		free(out);
 	}
 }

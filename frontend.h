@@ -16,19 +16,20 @@
 #ifndef _FRONTEND_H
 #define _FRONTEND_H
 
-#include "stdio.h"
+#include <stdio.h>
+#include "list.h"
 
 struct netns_entry;
 
 struct output_entry {
-	struct output_entry *next;
+	struct node n;
 	char *format, *file;
 	struct frontend *frontend;
 	unsigned int print_mask;
 };
 
 struct frontend {
-	struct frontend *next;
+	struct node n;
 	const char *format;
 	const char *desc;
 	void (*output)(FILE *file, struct netns_entry *root, struct output_entry *output_entry);
