@@ -17,15 +17,11 @@
 #define _HANDLER_H
 
 #include <stdio.h>
+#include "list.h"
 
 struct if_entry;
 struct netns_entry;
 struct rtattr;
-struct list;
-
-struct handler {
-	struct handler *next;
-};
 
 /* Only one handler for each driver allowed.
  * Generic handlers called for every interface are supported and are created
@@ -44,7 +40,7 @@ struct handler {
  *      freed automatically.
  */
 struct if_handler {
-	struct handler handler;
+	struct node n;
 	const char *driver;
 	size_t private_size;
 	int (*netlink)(struct if_entry *entry, struct rtattr **linkinfo);
@@ -61,7 +57,7 @@ int if_handler_post(struct list *netns_list);
 void if_handler_cleanup(struct if_entry *entry);
 
 struct netns_handler {
-	struct handler handler;
+	struct node n;
 	int (*scan)(struct netns_entry *entry);
 	void (*cleanup)(struct netns_entry *entry);
 };
@@ -71,7 +67,7 @@ int netns_handler_scan(struct netns_entry *entry);
 void netns_handler_cleanup(struct netns_entry *entry);
 
 struct global_handler {
-	struct handler handler;
+	struct node n;
 	int (*init)(void);
 	int (*post)(struct list *netns_list);
 	void (*cleanup)(struct list *netns_list);

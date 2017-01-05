@@ -20,44 +20,30 @@
 #include "if.h"
 #include "netns.h"
 
-struct handler_list {
-	struct handler *head, *tail;
-};
 
-static struct handler_list if_handlers, netns_handlers, global_handlers;
-
-void handler_register(struct handler_list *list, struct handler *h)
-{
-	h->next = NULL;
-	if (!list->head)
-		list->head = h;
-	else
-		list->tail->next = h;
-	list->tail = h;
-}
+static DECLARE_LIST(if_handlers);
+static DECLARE_LIST(netns_handlers);
+static DECLARE_LIST(global_handlers);
 
 void if_handler_register(struct if_handler *h)
 {
-	handler_register(&if_handlers, (struct handler *) h);
+	list_append(&if_handlers, node(h));
 }
 
 void netns_handler_register(struct netns_handler *h)
 {
-	handler_register(&netns_handlers, (struct handler *) h);
+	list_append(&netns_handlers, node(h));
 }
 
 void global_handler_register(struct global_handler *h)
 {
-	handler_register(&global_handlers, (struct handler *) h);
+	list_append(&global_handlers, node(h));
 }
 
 static int driver_match(struct if_handler *h, struct if_entry *e)
 {
 	return !h->driver || (e->driver && !strcmp(h->driver, e->driver));
 }
-
-#define for_each_handler(ptr, list) \
-    for (ptr = (void *) (list).head; ptr; ptr = (void *) ptr->handler.next)
 
 #define handler_callback(handler, callback, ...)				\
 	((handler)->callback ? (handler)->callback(__VA_ARGS__) : 0)
@@ -69,7 +55,7 @@ int if_handler_init(struct if_entry *entry)
 {
 	struct if_handler *h;
 
-	for_each_handler(h, if_handlers) {
+	list_for_each(h, if_handlers) {
 		if (!h->driver || strcmp(h->driver, entry->driver))
 			continue;
 
@@ -90,7 +76,7 @@ int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 	struct if_handler *h;
 	int err;
 
-	for_each_handler(h, if_handlers)
+	list_for_each(h, if_handlers)
 		if ((err = if_handler_callback(h, netlink, entry, linkinfo)))
 			return err;
 
@@ -102,7 +88,7 @@ int if_handler_scan(struct if_entry *entry)
 	struct if_handler *h;
 	int err;
 
-	for_each_handler(h, if_handlers)
+	list_for_each(h, if_handlers)
 		if ((err = if_handler_callback(h, scan, entry)))
 			return err;
 
@@ -118,7 +104,7 @@ int if_handler_post(struct list *netns_list)
 
 	list_for_each(ns, *netns_list)
 		list_for_each(entry, ns->ifaces)
-			for_each_handler(h, if_handlers)
+			list_for_each(h, if_handlers)
 				if ((err = if_handler_callback(h, post, entry, netns_list)))
 					return err;
 
@@ -129,7 +115,7 @@ void if_handler_cleanup(struct if_entry *entry)
 {
 	struct if_handler *h;
 
-	for_each_handler(h, if_handlers)
+	list_for_each(h, if_handlers)
 		if_handler_callback(h, cleanup, entry);
 
 	if (entry->handler_private)
@@ -141,7 +127,7 @@ int netns_handler_scan(struct netns_entry *entry)
 	struct netns_handler *h;
 	int err;
 
-	for_each_handler(h, netns_handlers)
+	list_for_each(h, netns_handlers)
 		if ((err = handler_callback(h, scan, entry)))
 			return err;
 
@@ -152,7 +138,7 @@ void netns_handler_cleanup(struct netns_entry *entry)
 {
 	struct netns_handler *h;
 
-	for_each_handler(h, netns_handlers)
+	list_for_each(h, netns_handlers)
 		handler_callback(h, cleanup, entry);
 }
 
@@ -161,7 +147,7 @@ int global_handler_init(void)
 	struct global_handler *h;
 	int err;
 
-	for_each_handler(h, global_handlers)
+	list_for_each(h, global_handlers)
 		if ((err = handler_callback(h, init)))
 			return err;
 
@@ -173,7 +159,7 @@ int global_handler_post(struct list *netns_list)
 	struct global_handler *h;
 	int err;
 
-	for_each_handler(h, global_handlers)
+	list_for_each(h, global_handlers)
 		if ((err = handler_callback(h, post, netns_list)))
 			return err;
 
@@ -184,6 +170,6 @@ void global_handler_cleanup(struct list *netns_list)
 {
 	struct global_handler *h;
 
-	for_each_handler(h, global_handlers)
+	list_for_each(h, global_handlers)
 		handler_callback(h, cleanup, netns_list);
 }
