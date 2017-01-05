@@ -50,7 +50,7 @@ int match_if(struct match_desc *desc, match_callback_f callback, void *arg)
 	int err;
 
 	if (desc->netns_list) {
-		for (ns = desc->netns_list; ns; ns = ns->next) {
+		list_for_each(ns, *desc->netns_list) {
 			desc->ns = ns;
 			if ((err = match_if_ns(desc, callback, arg)))
 				return err;
@@ -68,7 +68,7 @@ struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 	struct netns_id *ptr;
 	struct if_entry *entry;
 
-	for (ptr = current->ids; ptr; ptr = ptr->next) {
+	list_for_each(ptr, current->ids) {
 		if (ptr->id == netnsid) {
 			list_for_each(entry, ptr->ns->ifaces) {
 				if (entry->if_index == ifindex)
@@ -80,12 +80,12 @@ struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 	return NULL;
 }
 
-void match_all_netnsid(struct netns_entry *root)
+void match_all_netnsid(struct list *netns_list)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
 
-	for (ns = root; ns; ns = ns->next) {
+	list_for_each(ns, *netns_list) {
 		list_for_each(entry, ns->ifaces) {
 			if (entry->link_netnsid >= 0)
 				link_set(match_if_netnsid(entry->link_index,

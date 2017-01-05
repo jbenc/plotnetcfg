@@ -47,7 +47,7 @@ struct team_priv {
 };
 
 static int team_scan(struct if_entry *entry);
-static int team_post(struct if_entry *entry, struct netns_entry *root);
+static int team_post(struct if_entry *entry, struct list *netns_list);
 static void team_cleanup(struct if_entry *entry);
 
 static struct if_handler h_team = {
@@ -301,7 +301,7 @@ error_conn:
 	return 0;
 }
 
-static int team_post(struct if_entry *master, _unused struct netns_entry *root)
+static int team_post(struct if_entry *master, _unused struct list *netns_list)
 {
 	struct team_priv *priv = master->handler_private;
 	struct if_entry *slave;

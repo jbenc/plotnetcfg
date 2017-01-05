@@ -15,11 +15,13 @@
 
 #ifndef _HANDLER_H
 #define _HANDLER_H
+
 #include <stdio.h>
 
 struct if_entry;
 struct netns_entry;
 struct rtattr;
+struct list;
 
 struct handler {
 	struct handler *next;
@@ -47,7 +49,7 @@ struct if_handler {
 	size_t private_size;
 	int (*netlink)(struct if_entry *entry, struct rtattr **linkinfo);
 	int (*scan)(struct if_entry *entry);
-	int (*post)(struct if_entry *entry, struct netns_entry *root);
+	int (*post)(struct if_entry *entry, struct list *netns_list);
 	void (*cleanup)(struct if_entry *entry);
 };
 
@@ -55,7 +57,7 @@ void if_handler_register(struct if_handler *h);
 int if_handler_init(struct if_entry *entry);
 int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 int if_handler_scan(struct if_entry *entry);
-int if_handler_post(struct netns_entry *root);
+int if_handler_post(struct list *netns_list);
 void if_handler_cleanup(struct if_entry *entry);
 
 struct netns_handler {
@@ -71,13 +73,13 @@ void netns_handler_cleanup(struct netns_entry *entry);
 struct global_handler {
 	struct handler handler;
 	int (*init)(void);
-	int (*post)(struct netns_entry *root);
-	void (*cleanup)(struct netns_entry *root);
+	int (*post)(struct list *netns_list);
+	void (*cleanup)(struct list *netns_list);
 };
 
 void global_handler_register(struct global_handler *h);
 int global_handler_init(void);
-int global_handler_post(struct netns_entry *root);
-void global_handler_cleanup(struct netns_entry *root);
+int global_handler_post(struct list *netns_list);
+void global_handler_cleanup(struct list *netns_list);
 
 #endif

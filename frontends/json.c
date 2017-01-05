@@ -229,11 +229,13 @@ static json_t *rtables_to_array(struct list *tables)
 	return ifarr;
 }
 
-static void json_output(FILE *f, struct netns_entry *root, struct output_entry *output_entry)
+static void json_output(FILE *f, struct list *netns_list, struct output_entry *output_entry)
 {
-	struct netns_entry *entry;
+	struct netns_entry *entry, *root;
 	json_t *output, *ns_list, *ns;
 	time_t cur;
+
+	root = list_head(*netns_list);
 
 	time(&cur);
 	output = json_object();
@@ -242,7 +244,7 @@ static void json_output(FILE *f, struct netns_entry *root, struct output_entry *
 	json_object_set_new(output, "date", json_string(ctime(&cur)));
 	json_object_set_new(output, "root", json_string(nsid(root)));
 	ns_list = json_object();
-	for (entry = root; entry; entry = entry->next) {
+	list_for_each(entry, *netns_list) {
 		ns = json_object();
 		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));

@@ -62,19 +62,19 @@ static long netns_get_kernel_id(const char *path)
 	return result;
 }
 
-static struct netns_entry *netns_check_duplicate(struct netns_entry *root,
+static struct netns_entry *netns_check_duplicate(struct list *netns_list,
 						 long int kernel_id)
 {
-	while (root) {
-		if (root->kernel_id == kernel_id)
-			return root;
-		root = root->next;
-	}
+	struct netns_entry *ns;
+
+	list_for_each(ns, *netns_list)
+		if (ns->kernel_id == kernel_id)
+			return ns;
 	return NULL;
 }
 
 static int netns_get_var_entry(struct netns_entry **result,
-			       struct netns_entry *root,
+			       struct list *netns_list,
 			       const char *name)
 {
 	struct netns_entry *entry;
@@ -98,7 +98,7 @@ static int netns_get_var_entry(struct netns_entry **result,
 	kernel_id = netns_get_kernel_id("/proc/self/ns/net");
 	if (kernel_id < 0)
 		return -kernel_id;
-	if (netns_check_duplicate(root, kernel_id)) {
+	if (netns_check_duplicate(netns_list, kernel_id)) {
 		close(entry->fd);
 		free(entry);
 		return -1;
@@ -151,7 +151,7 @@ static struct netns_entry *netns_create()
 }
 
 static int netns_get_proc_entry(struct netns_entry **result,
-				struct netns_entry *root,
+				struct list *netns_list,
 				const char *spid)
 {
 	struct netns_entry *entry, *dup;
@@ -166,7 +166,7 @@ static int netns_get_proc_entry(struct netns_entry **result,
 		return -1;
 	}
 	pid = atol(spid);
-	dup = netns_check_duplicate(root, kernel_id);
+	dup = netns_check_duplicate(netns_list, kernel_id);
 	if (dup) {
 		if (dup->pid && (dup->pid > pid)) {
 			dup->pid = pid;
@@ -191,25 +191,30 @@ static int netns_get_proc_entry(struct netns_entry **result,
 	return 0;
 }
 
-static int netns_new_list(struct netns_entry **root, int supported)
+static int netns_new_list(struct list *result, int supported)
 {
-	*root = netns_create();
-	if (!*root)
+	struct netns_entry *root;
+
+	root = netns_create();
+	if (!root)
 		return ENOMEM;
 	if (supported) {
-		(*root)->kernel_id = netns_get_kernel_id("/proc/1/ns/net");
-		if ((*root)->kernel_id < 0)
-			return -(*root)->kernel_id;
-		(*root)->fd = open("/proc/1/ns/net", O_RDONLY);
-		if ((*root)->fd < 0)
+		root->kernel_id = netns_get_kernel_id("/proc/1/ns/net");
+		if (root->kernel_id < 0)
+			return -root->kernel_id;
+		root->fd = open("/proc/1/ns/net", O_RDONLY);
+		if (root->fd < 0)
 			return errno;
 	}
+
+	list_init(result);
+	list_append(result, node(root));
 	return 0;
 }
 
-static int netns_add_var_list(struct netns_entry *root)
+static int netns_add_var_list(struct list *netns_list)
 {
-	struct netns_entry *entry, *ptr;
+	struct netns_entry *entry;
 	struct dirent *de;
 	DIR *dir;
 	int err;
@@ -218,32 +223,27 @@ static int netns_add_var_list(struct netns_entry *root)
 	if (!dir)
 		return 0;
 
-	ptr = root;
-	while (ptr->next)
-		ptr = ptr->next;
-
 	while ((de = readdir(dir)) != NULL) {
 		if (!strcmp(de->d_name, ".") ||
 		    !strcmp(de->d_name, ".."))
 			continue;
-		err = netns_get_var_entry(&entry, root, de->d_name);
+		err = netns_get_var_entry(&entry, netns_list, de->d_name);
 		if (err < 0) {
 			/* duplicate entry */
 			continue;
 		}
 		if (err)
 			return err;
-		ptr->next = entry;
-		ptr = entry;
+		list_append(netns_list, node(entry));
 	}
 	closedir(dir);
 
 	return 0;
 }
 
-static int netns_add_proc_list(struct netns_entry *root)
+static int netns_add_proc_list(struct list *netns_list)
 {
-	struct netns_entry *entry, *ptr;
+	struct netns_entry *entry;
 	struct dirent *de;
 	DIR *dir;
 	int err;
@@ -252,25 +252,20 @@ static int netns_add_proc_list(struct netns_entry *root)
 	if (!dir)
 		return 0;
 
-	ptr = root;
-	while (ptr->next)
-		ptr = ptr->next;
-
 	while ((de = readdir(dir)) != NULL) {
 		if (!strcmp(de->d_name, ".") ||
 		    !strcmp(de->d_name, ".."))
 			continue;
 		if (de->d_name[0] < '0' || de->d_name[0] > '9')
 			continue;
-		err = netns_get_proc_entry(&entry, root, de->d_name);
+		err = netns_get_proc_entry(&entry, netns_list, de->d_name);
 		if (err < 0) {
 			/* duplicate entry */
 			continue;
 		}
 		if (err)
 			return err;
-		ptr->next = entry;
-		ptr = entry;
+		list_append(netns_list, node(entry));
 	}
 	closedir(dir);
 
@@ -315,37 +310,35 @@ out:
 
 /* This is best effort only, if anything fails (e.g. netnsids are not
  * supported by kernel), we fail back to heuristics. */
-static void netns_get_all_ids(struct netns_entry *current, struct netns_entry *root)
+static void netns_get_all_ids(struct netns_entry *current, struct list *netns_list)
 {
 	struct nl_handle hnd;
 	struct netns_entry *entry;
-	struct netns_id *nsid, *ptr = NULL;
+	struct netns_id *nsid;
 	int id;
 
 	if (netns_switch(current))
 		return;
 	if (rtnl_open(&hnd) < 0)
 		return;
-	for (entry = root; entry; entry = entry->next) {
+
+	list_init(&current->ids);
+
+	list_for_each(entry, *netns_list) {
 		id = netns_get_id(&hnd, entry);
 		if (id < 0)
 			continue;
 		nsid = malloc(sizeof(*nsid));
 		if (!nsid)
 			break;
-		nsid->next = NULL;
 		nsid->ns = entry;
 		nsid->id = id;
-		if (!ptr)
-			current->ids = nsid;
-		else
-			ptr->next = nsid;
-		ptr = nsid;
+		list_append(&current->ids, node(nsid));
 	}
 	nl_close(&hnd);
 }
 
-int netns_list(struct netns_entry **result, int supported)
+int netns_fill_list(struct list *result, int supported)
 {
 	struct netns_entry *entry;
 	int err;
@@ -354,10 +347,10 @@ int netns_list(struct netns_entry **result, int supported)
 	if (err)
 		return err;
 	if (supported) {
-		err = netns_add_var_list(*result);
+		err = netns_add_var_list(result);
 		if (err)
 			return err;
-		err = netns_add_proc_list(*result);
+		err = netns_add_proc_list(result);
 		if (err)
 			return err;
 	}
@@ -365,7 +358,7 @@ int netns_list(struct netns_entry **result, int supported)
 	if ((err = sysfs_init()))
 		return err;
 
-	for (entry = *result; entry; entry = entry->next) {
+	list_for_each(entry, *result) {
 		if (entry->name) {
 			/* Do not try to switch to the root netns, as we're
 			 * already there when processing the first entry,
@@ -387,16 +380,16 @@ int netns_list(struct netns_entry **result, int supported)
 	 * them needlessly - the kernel assigns only those that are really
 	 * needed while doing netlinks dumps. Note also that netnsids are
 	 * per name space and this is O(n^2). */
-	for (entry = *result; entry; entry = entry->next)
-		netns_get_all_ids(entry, *result);
+	list_for_each(entry, *result)
+		netns_get_all_ids(entry, result);
 	/* And finally, resolve netnsid+ifindex to the if_entry pointers. */
-	match_all_netnsid(*result);
+	match_all_netnsid(result);
 
-	if ((err = master_resolve(*result)))
+	if ((err = master_resolve(result)))
 		return err;
-	if ((err = global_handler_post(*result)))
+	if ((err = global_handler_post(result)))
 		return err;
-	if ((err = if_handler_post(*result)))
+	if ((err = if_handler_post(result)))
 		return err;
 	return 0;
 }
@@ -437,12 +430,12 @@ int netns_switch_root(void)
 static void netns_list_destruct(struct netns_entry *entry)
 {
 	netns_handler_cleanup(entry);
-	slist_free(entry->ids, NULL);
+	list_free(&entry->ids, NULL);
 	if_list_free(&entry->ifaces);
 	free(entry->name);
 }
 
-void netns_list_free(struct netns_entry *list)
+void netns_list_free(struct list *netns_list)
 {
-	slist_free(list, (destruct_f)netns_list_destruct);
+	list_free(netns_list, (destruct_f)netns_list_destruct);
 }

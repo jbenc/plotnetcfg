@@ -23,7 +23,7 @@ struct netns_entry;
 /*
  * Resolves entry->master_index to entry->master.
  */
-int master_resolve(struct netns_entry *root);
+int master_resolve(struct list *netns_list);
 
 /*
  * Updates slave->master and master->rev_master appropriately.

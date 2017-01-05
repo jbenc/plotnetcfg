@@ -18,19 +18,20 @@
 
 #include <sys/types.h>
 #include "if.h"
+#include "list.h"
 
 struct label;
 struct netns_entry;
 struct route;
 
 struct netns_id {
-	struct netns_id *next;
+	struct node n;
 	struct netns_entry *ns;
 	int id;
 };
 
 struct netns_entry {
-	struct netns_entry *next;
+	struct node n;
 	struct list ifaces;
 	struct label *warnings;
 	long kernel_id;
@@ -39,12 +40,12 @@ struct netns_entry {
 	char *name;
 	pid_t pid;
 	int fd;
-	struct netns_id *ids;
+	struct list ids;
 	struct list rtables;
 };
 
-int netns_list(struct netns_entry **result, int supported);
-void netns_list_free(struct netns_entry *list);
+int netns_fill_list(struct list *result, int supported);
+void netns_list_free(struct list *list);
 int netns_switch(struct netns_entry *dest);
 int netns_switch_root(void);
 

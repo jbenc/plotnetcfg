@@ -47,7 +47,7 @@ struct bond_private {
 
 static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo);
 static int bond_scan(struct if_entry *entry);
-static int bond_post(struct if_entry *entry, struct netns_entry *root);
+static int bond_post(struct if_entry *entry, struct list *netns_list);
 static void bond_cleanup(struct if_entry *entry);
 
 static struct if_handler h_bond = {
@@ -141,7 +141,7 @@ static int bond_scan(struct if_entry *entry)
 
 	return 0;
 }
-static int bond_post(struct if_entry *entry, _unused struct netns_entry *root)
+static int bond_post(struct if_entry *entry, _unused struct list *netns_list)
 {
 	struct bond_private *priv = entry->handler_private;
 	struct if_entry *slave;

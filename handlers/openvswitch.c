@@ -470,8 +470,9 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	return weight;
 }
 
-static int link_iface(struct ovs_if *iface, struct netns_entry *root, int required)
+static int link_iface(struct ovs_if *iface, struct list *netns_list, int required)
 {
+	struct netns_entry *root = list_head(*netns_list);
 	struct match_desc match;
 	int err;
 
@@ -479,7 +480,7 @@ static int link_iface(struct ovs_if *iface, struct netns_entry *root, int requir
 		return 0;
 
 	match_init(&match);
-	match.netns_list = root;
+	match.netns_list = netns_list;
 
 	if ((err = match_if(&match, link_iface_search, iface)))
 		return err;
@@ -565,13 +566,13 @@ static int link_patch_search(struct if_entry *entry, void *arg)
 	return 1;
 }
 
-static int link_patch(struct ovs_if *iface, struct netns_entry *root)
+static int link_patch(struct ovs_if *iface, struct list *netns_list)
 {
 	int err;
 	struct match_desc match;
 
 	match_init(&match);
-	match.netns_list = root;
+	match.netns_list = netns_list;
 
 	if ((err = match_if(&match, link_patch_search, iface)))
 		return err;
@@ -585,8 +586,9 @@ static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 	return 0;
 }
 
-static int link_ifaces(struct netns_entry *root)
+static int link_ifaces(struct list *netns_list)
 {
+	struct netns_entry *root = list_head(*netns_list);
 	struct ovs_bridge *br;
 	struct ovs_port *port;
 	struct ovs_if *iface;
@@ -602,7 +604,7 @@ static int link_ifaces(struct netns_entry *root)
 			return label_add(&root->warnings,
 					 "Main port for openvswitch bridge %s appears to have several interfaces",
 					 br->name);
-		if ((err = link_iface(br->system->ifaces, root, 1)))
+		if ((err = link_iface(br->system->ifaces, netns_list, 1)))
 			return err;
 		for (port = br->ports; port; port = port->next) {
 			if (port == br->system)
@@ -617,7 +619,7 @@ static int link_ifaces(struct netns_entry *root)
 				label_port_or_iface(port, port->link);
 			}
 			for (iface = port->ifaces; iface; iface = iface->next) {
-				if ((err = link_iface(iface, root, 0)))
+				if ((err = link_iface(iface, netns_list, 0)))
 					return err;
 				if (!iface->link) {
 					iface->link = create_iface(iface->name,
@@ -636,7 +638,7 @@ static int link_ifaces(struct netns_entry *root)
 				if (!strcmp(iface->type, "vxlan"))
 					link_vxlan(iface);
 				else if (!strcmp(iface->type, "patch")) {
-					if ((err = link_patch(iface, root)))
+					if ((err = link_patch(iface, netns_list)))
 						return err;
 				}
 			}
@@ -645,7 +647,7 @@ static int link_ifaces(struct netns_entry *root)
 	return 0;
 }
 
-static int ovs_global_post(struct netns_entry *root)
+static int ovs_global_post(struct list *netns_list)
 {
 	char *str;
 	int fd, len;
@@ -667,7 +669,7 @@ static int ovs_global_post(struct netns_entry *root)
 	close(fd);
 	if (!br_list)
 		return 0;
-	if ((err = link_ifaces(root)))
+	if ((err = link_ifaces(netns_list)))
 		return err;
 	return 0;
 }
@@ -707,7 +709,7 @@ static int ovs_global_init(void)
 	return 0;
 }
 
-static void ovs_global_cleanup(_unused struct netns_entry *root)
+static void ovs_global_cleanup(_unused struct list *netns_list)
 {
 	slist_free(br_list, (destruct_f)destruct_bridge);
 }

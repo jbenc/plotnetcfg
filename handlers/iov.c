@@ -26,7 +26,7 @@
 struct netns_entry;
 
 static int iov_scan(struct if_entry *entry);
-static int iov_post(struct if_entry *entry, struct netns_entry *root);
+static int iov_post(struct if_entry *entry, struct list *netns_list);
 static void iov_cleanup(struct if_entry *entry);
 
 static struct if_handler h_iov = {
@@ -89,7 +89,7 @@ static int match_physfn(struct if_entry *physfn, void *arg)
 	return 0;
 }
 
-static int iov_post(struct if_entry *entry, struct netns_entry *root)
+static int iov_post(struct if_entry *entry, struct list *netns_list)
 {
 	struct match_desc match;
 	int err = 0;
@@ -99,7 +99,7 @@ static int iov_post(struct if_entry *entry, struct netns_entry *root)
 
 	match_init(&match);
 	match.mode = MM_FIRST;
-	match.netns_list = root;
+	match.netns_list = netns_list;
 	match.exclude = entry;
 	if ((err = match_if(&match, match_physfn, entry)))
 		return err;

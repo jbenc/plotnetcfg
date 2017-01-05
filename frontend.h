@@ -32,12 +32,12 @@ struct frontend {
 	struct node n;
 	const char *format;
 	const char *desc;
-	void (*output)(FILE *file, struct netns_entry *root, struct output_entry *output_entry);
+	void (*output)(FILE *file, struct list *netns_list, struct output_entry *output_entry);
 };
 
 void frontend_init(void);
 void frontend_register(struct frontend *f);
-int frontend_output(struct netns_entry *root);
+int frontend_output(struct list *netns_list);
 void frontend_cleanup(void);
 
 #endif

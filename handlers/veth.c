@@ -25,7 +25,7 @@
 struct netns_entry;
 
 static int veth_scan(struct if_entry *entry);
-static int veth_post(struct if_entry *entry, struct netns_entry *root);
+static int veth_post(struct if_entry *entry, struct list *netns_list);
 
 static struct if_handler h_veth = {
 	.driver = "veth",
@@ -66,7 +66,7 @@ static int match_peer(struct if_entry *entry, void *arg)
 	return 1;
 }
 
-static int veth_post(struct if_entry *entry, struct netns_entry *root)
+static int veth_post(struct if_entry *entry, struct list *netns_list)
 {
 	int err;
 	struct match_desc match;
@@ -77,7 +77,7 @@ static int veth_post(struct if_entry *entry, struct netns_entry *root)
 		return ENOENT;
 
 	match_init(&match);
-	match.netns_list = root;
+	match.netns_list = netns_list;
 	match.exclude = entry;
 
 	if ((err = match_if(&match, match_peer, entry)))

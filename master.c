@@ -89,13 +89,13 @@ static int err_msg(struct match_desc *match, const char *type, struct if_entry *
 	return 0;
 }
 
-static int process(struct if_entry *entry, struct netns_entry *root)
+static int process(struct if_entry *entry, struct list *netns_list)
 {
 	int err;
 	struct match_desc match;
 
 	match_init(&match);
-	match.netns_list = root;
+	match.netns_list = netns_list;
 	match.exclude = entry;
 
 	if (!entry->master && entry->master_index) {
@@ -117,15 +117,15 @@ static int process(struct if_entry *entry, struct netns_entry *root)
 	return 0;
 }
 
-int master_resolve(struct netns_entry *root)
+int master_resolve(struct list *netns_list)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
 	int err;
 
-	for (ns = root; ns; ns = ns->next) {
+	list_for_each(ns, *netns_list) {
 		list_for_each(entry, ns->ifaces) {
-			err = process(entry, root);
+			err = process(entry, netns_list);
 			if (err)
 				return err;
 		}

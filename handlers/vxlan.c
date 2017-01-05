@@ -37,7 +37,7 @@ struct vxlan_priv {
 };
 
 static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
-static int vxlan_post(struct if_entry *entry, struct netns_entry *root);
+static int vxlan_post(struct if_entry *entry, struct list *netns_list);
 
 static struct if_handler h_vxlan = {
 	.driver = "vxlan",
@@ -128,7 +128,7 @@ err:
 	return err;
 }
 
-static int vxlan_post(struct if_entry *entry, _unused struct netns_entry *root)
+static int vxlan_post(struct if_entry *entry, _unused struct list *netns_list)
 {
 	struct vxlan_priv *priv;
 	struct if_entry *ife;

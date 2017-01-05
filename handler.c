@@ -109,17 +109,17 @@ int if_handler_scan(struct if_entry *entry)
 	return 0;
 }
 
-int if_handler_post(struct netns_entry *root)
+int if_handler_post(struct list *netns_list)
 {
 	struct netns_entry *ns;
 	struct if_entry *entry;
 	struct if_handler *h;
 	int err;
 
-	for (ns = root; ns; ns = ns->next)
-		list_for_each(entry, root->ifaces)
+	list_for_each(ns, *netns_list)
+		list_for_each(entry, ns->ifaces)
 			for_each_handler(h, if_handlers)
-				if ((err = if_handler_callback(h, post, entry, root)))
+				if ((err = if_handler_callback(h, post, entry, netns_list)))
 					return err;
 
 	return 0;
@@ -168,22 +168,22 @@ int global_handler_init(void)
 	return 0;
 }
 
-int global_handler_post(struct netns_entry *root)
+int global_handler_post(struct list *netns_list)
 {
 	struct global_handler *h;
 	int err;
 
 	for_each_handler(h, global_handlers)
-		if ((err = handler_callback(h, post, root)))
+		if ((err = handler_callback(h, post, netns_list)))
 			return err;
 
 	return 0;
 }
 
-void global_handler_cleanup(struct netns_entry *root)
+void global_handler_cleanup(struct list *netns_list)
 {
 	struct global_handler *h;
 
 	for_each_handler(h, global_handlers)
-		handler_callback(h, cleanup, root);
+		handler_callback(h, cleanup, netns_list);
 }

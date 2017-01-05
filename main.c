@@ -100,7 +100,7 @@ static int check_caps(void)
 
 int main(int argc, char **argv)
 {
-	struct netns_entry *root;
+	struct list netns_list;
 	int netns_ok, err;
 
 	arg_register_batch(options, ARRAY_SIZE(options));
@@ -123,16 +123,16 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Initialization failed: %s\n", strerror(err));
 		exit(1);
 	}
-	if ((err = netns_list(&root, netns_ok == 0))) {
+	if ((err = netns_fill_list(&netns_list, netns_ok == 0))) {
 		fprintf(stderr, "ERROR: %s\n", strerror(err));
 		exit(1);
 	}
-	if ((err = frontend_output(root))) {
+	if ((err = frontend_output(&netns_list))) {
 		fprintf(stderr, "Invalid output format specified.\n");
 		exit(1);
 	}
-	global_handler_cleanup(root);
-	netns_list_free(root);
+	global_handler_cleanup(&netns_list);
+	netns_list_free(&netns_list);
 	frontend_cleanup();
 
 	return 0;

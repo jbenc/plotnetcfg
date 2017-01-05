@@ -150,7 +150,7 @@ void frontend_register(struct frontend *f)
 	list_append(&frontends, node(f));
 }
 
-int frontend_output(struct netns_entry *root)
+int frontend_output(struct list *netns_list)
 {
 	struct frontend *f;
 	struct output_entry *out;
@@ -177,7 +177,7 @@ int frontend_output(struct netns_entry *root)
 		} else
 			file = stdout;
 
-		out->frontend->output(file, root, out);
+		out->frontend->output(file, netns_list, out);
 
 		if (file != stdout && fclose(file))
 			return errno;

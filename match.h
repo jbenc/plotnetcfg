@@ -17,6 +17,7 @@
 #define _MATCH_H
 
 #include <string.h>
+#include "list.h"
 
 struct if_entry;
 struct netns_entry;
@@ -34,7 +35,7 @@ struct match_desc {
 	struct if_entry *exclude;
 
 	/* Search in netns list or one ns */
-	struct netns_entry *netns_list;
+	struct list *netns_list;
 	struct netns_entry *ns;
 
 	/* Internal. Use match_found and match_ambiguous functions. */
@@ -68,6 +69,6 @@ static inline void match_init(struct match_desc *desc)
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 				  struct netns_entry *current);
 
-void match_all_netnsid(struct netns_entry *root);
+void match_all_netnsid(struct list *netns_list);
 
 #endif
