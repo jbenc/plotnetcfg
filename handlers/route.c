@@ -146,11 +146,13 @@ static int rtable_create(struct rtable **rtd, int id)
 	return 0;
 }
 
-static struct if_entry *find_if_by_ifindex(struct if_entry *ife, unsigned int ifindex)
+static struct if_entry *find_if_by_ifindex(struct list *list, unsigned int ifindex)
 {
-	for (; ife; ife = ife->next)
-		if (ife->if_index == ifindex)
-			return ife;
+	struct if_entry *entry;
+
+	list_for_each(entry, *list)
+		if (entry->if_index == ifindex)
+			return entry;
 	return NULL;
 }
 
@@ -185,8 +187,8 @@ int route_scan(struct netns_entry *ns)
 		if ((err = route_create_netlink(&r, &nle->h)))
 			goto err_dst;
 
-		r->oif = find_if_by_ifindex(ns->ifaces, r->oifindex);
-		r->iif = find_if_by_ifindex(ns->ifaces, r->iifindex);
+		r->oif = find_if_by_ifindex(&ns->ifaces, r->oifindex);
+		r->iif = find_if_by_ifindex(&ns->ifaces, r->iifindex);
 
 		if (!tables[r->table_id])
 			if ((err = rtable_create(&tables[r->table_id], r->table_id)))

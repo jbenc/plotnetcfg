@@ -24,58 +24,26 @@
 #include "match.h"
 #include "netns.h"
 
-#define memberof(ptr, offset, type) (*((type *) ((char *) (ptr) + (offset))))
-
-static int rev_set(struct if_entry *main, size_t rev_list_off, struct if_entry *other, size_t rel_off)
+int master_set(struct if_entry *master, struct if_entry *master_of)
 {
-	struct if_list_entry **le_ptr, *le;
-	struct if_entry **old_main;
-	struct if_list_entry **old_list;
+	if (master_of->master != NULL)
+		node_remove(&master_of->rev_master_node);
+	master_of->master = master;
+	if (master_of->master != NULL)
+		list_append(&master_of->master->rev_master, &master_of->rev_master_node);
 
-	le = NULL;
-	old_main = &memberof(other, rel_off, struct if_entry *);
-	if (*old_main) {
-		for (le_ptr = &memberof(*old_main, rev_list_off, struct if_list_entry *); *le_ptr; le_ptr = &(*le_ptr)->next) {
-			le = *le_ptr;
-			if (le->entry == other) {
-				*le_ptr = le->next;
-				break;
-			}
-		}
-		*old_main = NULL;
-	}
-
-	if (!main) {
-		if (le)
-			free(le);
-		return 0;
-	}
-
-	*old_main = main;
-
-	if (!le)
-		le = malloc(sizeof(*le));
-
-	if (!le)
-		return ENOMEM;
-
-	le->entry = other;
-	old_list = &memberof(main, rev_list_off, struct if_list_entry *);
-	le->next = *old_list;
-	*old_list = le;
 	return 0;
-}
-
-int master_set(struct if_entry *master, struct if_entry *slave)
-{
-	return rev_set(master, offsetof(struct if_entry, rev_master),
-		       slave, offsetof(struct if_entry, master));
 }
 
 int link_set(struct if_entry *link, struct if_entry *entry)
 {
-	return rev_set(link, offsetof(struct if_entry, rev_link),
-		       entry, offsetof(struct if_entry, link));
+	if (entry->link != NULL)
+		node_remove(&entry->rev_link_node);
+	entry->link = link;
+	if (entry->link != NULL)
+		list_append(&entry->link->rev_link, &entry->rev_link_node);
+
+	return 0;
 }
 
 int peer_set(struct if_entry *first, struct if_entry *second)
@@ -153,7 +121,7 @@ int master_resolve(struct netns_entry *root)
 	int err;
 
 	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
+		list_for_each(entry, ns->ifaces) {
 			err = process(entry, root);
 			if (err)
 				return err;

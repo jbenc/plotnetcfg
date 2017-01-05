@@ -23,11 +23,11 @@
 static int match_tunnel(struct if_entry *entry, void *arg)
 {
 	struct addr *data = arg;
-	struct if_addr_entry *addr;
+	struct if_addr *addr;
 
 	if (!(entry->flags & IF_UP))
 		return 0;
-	for (addr = entry->addr; addr; addr = addr->next) {
+	list_for_each(addr, entry->addr) {
 		if (addr->addr.family != data->family)
 			continue;
 		if (!memcmp(addr->addr.raw, data->raw, data->family == AF_INET ? 4 : 16))

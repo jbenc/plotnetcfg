@@ -30,7 +30,7 @@ int match_if_heur(struct if_entry **found,
 	int prio = 0, count = 0, res;
 
 	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
+		list_for_each(entry, root->ifaces) {
 			if (entry == self)
 				continue;
 			res = callback(entry, arg);
@@ -66,7 +66,7 @@ int match_if(struct if_entry **found,
 	int res;
 
 	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
+		list_for_each(entry, ns->ifaces) {
 			if (entry == self)
 				continue;
 			res = callback(entry, arg);
@@ -93,7 +93,7 @@ struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 
 	for (ptr = current->ids; ptr; ptr = ptr->next) {
 		if (ptr->id == netnsid) {
-			for (entry = ptr->ns->ifaces; entry; entry = entry->next) {
+			list_for_each(entry, ptr->ns->ifaces) {
 				if (entry->if_index == ifindex)
 					return entry;
 			}
@@ -109,7 +109,7 @@ void match_all_netnsid(struct netns_entry *root)
 	struct if_entry *entry;
 
 	for (ns = root; ns; ns = ns->next) {
-		for (entry = ns->ifaces; entry; entry = entry->next) {
+		list_for_each(entry, ns->ifaces) {
 			if (entry->link_netnsid >= 0)
 				link_set(match_if_netnsid(entry->link_index,
 							  entry->link_netnsid,

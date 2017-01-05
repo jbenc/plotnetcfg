@@ -71,17 +71,17 @@ static json_t *address_to_obj(struct addr *addr)
 	return obj;
 }
 
-static json_t *addresses_to_array(struct if_addr_entry *entry)
+static json_t *addresses_to_array(struct list *addresses)
 {
 	json_t *arr, *addr;
+	struct if_addr *entry;
 
 	arr = json_array();
-	while (entry) {
+	list_for_each(entry, *addresses) {
 		addr = address_to_obj(&entry->addr);
 		if (entry->peer.formatted)
 			json_object_set_new(addr, "peer", address_to_obj(&entry->peer));
 		json_array_append_new(arr, addr);
-		entry = entry->next;
 	}
 	return arr;
 }
@@ -100,14 +100,14 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 	return obj;
 }
 
-static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *output_entry)
+static json_t *interfaces_to_array(struct list *list, struct output_entry *output_entry)
 {
-	struct if_list_entry *iflist;
+	struct if_entry *entry, *link, *slave;
 	json_t *ifarr, *ifobj, *children, *parents, *jconn;
 	char *s;
 
 	ifarr = json_object();
-	while (entry) {
+	list_for_each(entry, *list) {
 		ifobj = json_object();
 		json_object_set_new(ifobj, "id", json_string(ifid(entry)));
 		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
@@ -115,7 +115,7 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
 		json_object_set_new(ifobj, "info", label_properties_to_object(entry->prop, output_entry->print_mask));
 		if (label_prop_match_mask(IF_PROP_CONFIG, output_entry->print_mask)) {
-			json_object_set_new(ifobj, "addresses", addresses_to_array(entry->addr));
+			json_object_set_new(ifobj, "addresses", addresses_to_array(&entry->addr));
 			json_object_set_new(ifobj, "mtu", json_integer(entry->mtu));
 			if ((entry->flags & IF_LOOPBACK) == 0 && entry->mac_addr.formatted)
 				json_object_set_new(ifobj, "mac", json_string(entry->mac_addr.formatted));
@@ -142,9 +142,9 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 						      entry->link ? NULL : entry->edge_label);
 			json_object_set_new(parents, ifid(entry->master), jconn);
 		} else
-			for (iflist = entry->rev_link; iflist; iflist = iflist->next) {
-				jconn = connection(iflist->entry, iflist->entry->edge_label);
-				json_object_set_new(parents, ifid(iflist->entry), jconn);
+			list_for_each_member(link, entry->rev_link, rev_link_node) {
+				jconn = connection(link, link->edge_label);
+				json_object_set_new(parents, ifid(link), jconn);
 			}
 		if (json_object_size(parents))
 			json_object_set(ifobj, "parents", parents);
@@ -155,11 +155,9 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 			jconn = connection(entry->link, entry->edge_label);
 			json_object_set_new(children, ifid(entry->link), jconn);
 		} else
-			for (iflist = entry->rev_master; iflist; iflist = iflist->next) {
-				jconn = connection(iflist->entry,
-						   iflist->entry->link ? NULL :
-						   iflist->entry->edge_label);
-				json_object_set_new(children, ifid(iflist->entry), jconn);
+			list_for_each_member(slave, entry->rev_master, rev_master_node) {
+				jconn = connection(slave, slave->link ? NULL : slave->edge_label);
+				json_object_set_new(children, ifid(slave), jconn);
 			}
 		if (json_object_size(children))
 			json_object_set(ifobj, "children", children);
@@ -169,7 +167,6 @@ static json_t *interfaces_to_array(struct if_entry *entry, struct output_entry *
 			json_object_set(ifobj, "peer", connection(entry->peer, NULL));
 
 		json_object_set_new(ifarr, ifid(entry), ifobj);
-		entry = entry->next;
 	}
 	return ifarr;
 }
@@ -247,7 +244,7 @@ static void json_output(FILE *f, struct netns_entry *root, struct output_entry *
 		ns = json_object();
 		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
-		json_object_set_new(ns, "interfaces", interfaces_to_array(entry->ifaces, output_entry));
+		json_object_set_new(ns, "interfaces", interfaces_to_array(&entry->ifaces, output_entry));
 		json_object_set_new(ns, "routes", rtables_to_array(entry->rtables));
 		if (entry->warnings)
 			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));

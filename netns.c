@@ -138,6 +138,18 @@ static void netns_proc_entry_set_name(struct netns_entry *entry,
 		entry->name = "?";
 }
 
+static struct netns_entry *netns_create()
+{
+	struct netns_entry *ns;
+
+	ns = calloc(sizeof(struct netns_entry), 1);
+	if (!ns)
+		return NULL;
+
+	list_init(&ns->ifaces);
+	return ns;
+}
+
 static int netns_get_proc_entry(struct netns_entry **result,
 				struct netns_entry *root,
 				const char *spid)
@@ -163,7 +175,7 @@ static int netns_get_proc_entry(struct netns_entry **result,
 		return -1;
 	}
 
-	*result = entry = calloc(sizeof(struct netns_entry), 1);
+	*result = entry = netns_create();
 	if (!entry)
 		return ENOMEM;
 
@@ -181,7 +193,7 @@ static int netns_get_proc_entry(struct netns_entry **result,
 
 static int netns_new_list(struct netns_entry **root, int supported)
 {
-	*root = calloc(sizeof(struct netns_entry), 1);
+	*root = netns_create();
 	if (!*root)
 		return ENOMEM;
 	if (supported) {
@@ -426,7 +438,7 @@ static void netns_list_destruct(struct netns_entry *entry)
 {
 	netns_handler_cleanup(entry);
 	slist_free(entry->ids, NULL);
-	if_list_free(entry->ifaces);
+	if_list_free(&entry->ifaces);
 	free(entry->name);
 }
 

@@ -117,7 +117,7 @@ int if_handler_post(struct netns_entry *root)
 	int err;
 
 	for (ns = root; ns; ns = ns->next)
-		for (entry = ns->ifaces; entry; entry = entry->next)
+		list_for_each(entry, root->ifaces)
 			for_each_handler(h, if_handlers)
 				if ((err = if_handler_callback(h, post, entry, root)))
 					return err;

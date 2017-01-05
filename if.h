@@ -18,23 +18,22 @@
 
 #include "addr.h"
 #include "label.h"
+#include "list.h"
 
 struct label;
 struct netns_entry;
 
-struct if_addr_entry {
-	struct if_addr_entry *next;
+struct if_addr {
+	struct node n;
 	struct addr addr;
 	struct addr peer;
 };
 
-struct if_list_entry {
-	struct if_list_entry *next;
-	struct if_entry *entry;
-};
-
 struct if_entry {
-	struct if_entry *next;
+	struct node n;			/* in netns->ifaces        */
+	struct node rev_master_node;	/* in if_entry->rev_master */
+	struct node rev_link_node;	/* in if_entry->rev_link   */
+
 	struct netns_entry *ns;
 	char *internal_ns;
 	unsigned int if_index;
@@ -52,14 +51,14 @@ struct if_entry {
 	unsigned int peer_index;
 	int peer_netnsid;
 	struct if_entry *peer;
-	struct if_addr_entry *addr;
+	struct list addr;
 	struct mac_addr mac_addr;
 	char *edge_label;
 	void *handler_private;
 	int warnings;
 	/* reverse fields needed by some frontends: */
-	struct if_list_entry *rev_master;
-	struct if_list_entry *rev_link;
+	struct list rev_master;
+	struct list rev_link;
 	char *pci_path;
 	char *pci_physfn_path;
 	struct if_entry *physfn;
@@ -72,10 +71,8 @@ struct if_entry {
 #define IF_LINK_WEAK		16
 #define IF_PASSIVE_SLAVE	32
 
-int if_list(struct if_entry **result, struct netns_entry *ns);
-void if_list_free(struct if_entry *list);
-
-void if_append(struct if_entry **list, struct if_entry *item);
+int if_list(struct list *result, struct netns_entry *ns);
+void if_list_free(struct list *list);
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...);
 

@@ -113,7 +113,7 @@ err_driver:
 
 static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 {
-	struct if_addr_entry *entry, *ptr = NULL;
+	struct if_addr *entry;
 	struct nlmsghdr *n;
 	struct ifaddrmsg *ifa;
 	struct rtattr *rta_tb[IFA_MAX + 1];
@@ -138,7 +138,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 			/* don't care about broadcast and anycast adresses */
 			continue;
 
-		entry = calloc(sizeof(struct if_addr_entry), 1);
+		entry = calloc(sizeof(struct if_addr), 1);
 		if (!entry)
 			return ENOMEM;
 
@@ -155,11 +155,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 				return err;
 		}
 
-		if (!ptr)
-			dest->addr = entry;
-		else
-			ptr->next = entry;
-		ptr = entry;
+		list_append(&dest->addr, node(entry));
 	}
 	return 0;
 }
@@ -171,20 +167,24 @@ static struct if_entry *if_alloc(void)
 	entry = calloc(sizeof(struct if_entry), 1);
 	if (!entry)
 		return NULL;
+
+	list_init(&entry->addr);
+	list_init(&entry->rev_master);
+	list_init(&entry->rev_link);
 	entry->link_netnsid = -1;
 	entry->peer_netnsid = -1;
 	mac_addr_init(&entry->mac_addr);
 	return entry;
 }
 
-int if_list(struct if_entry **result, struct netns_entry *ns)
+int if_list(struct list *result, struct netns_entry *ns)
 {
 	struct nl_handle hnd;
 	struct nlmsg_entry *linfo, *ainfo, *l;
-	struct if_entry *entry, *ptr = NULL;
+	struct if_entry *entry;
 	int err;
 
-	*result = NULL;
+	list_init(result);
 
 	if ((err = rtnl_open(&hnd)))
 		return err;
@@ -206,11 +206,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 			return err;
 		if ((err = if_handler_scan(entry)))
 			return err;
-		if (!ptr)
-			*result = entry;
-		else
-			ptr->next = entry;
-		ptr = entry;
+		list_append(result, node(entry));
 	}
 
 	nlmsg_free(linfo);
@@ -219,7 +215,7 @@ int if_list(struct if_entry **result, struct netns_entry *ns)
 	return 0;
 }
 
-static void if_addr_destruct(struct if_addr_entry *entry)
+static void if_addr_destruct(struct if_addr *entry)
 {
 	addr_destruct(&entry->addr);
 	addr_destruct(&entry->peer);
@@ -233,27 +229,12 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->edge_label);
 	mac_addr_destruct(&entry->mac_addr);
 	label_free_property(entry->prop);
-	slist_free(entry->addr, (destruct_f)if_addr_destruct);
-	slist_free(entry->rev_master, NULL);
+	list_free(&entry->addr, (destruct_f) if_addr_destruct);
 }
 
-void if_list_free(struct if_entry *list)
+void if_list_free(struct list *list)
 {
-	slist_free(list, (destruct_f)if_list_destruct);
-}
-
-void if_append(struct if_entry **list, struct if_entry *item)
-{
-	struct if_entry *ptr = *list;
-
-	item->next = NULL;
-	if (!ptr) {
-		*list = item;
-		return;
-	}
-	while (ptr->next)
-		ptr = ptr->next;
-	ptr->next = item;
+	list_free(list, (destruct_f) if_list_destruct);
 }
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...)

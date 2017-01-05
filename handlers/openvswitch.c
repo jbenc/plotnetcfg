@@ -506,7 +506,7 @@ static struct if_entry *create_iface(char *name, char *br_name, struct netns_ent
 		return NULL;
 	entry->flags |= IF_INTERNAL;
 
-	if_append(&root->ifaces, entry);
+	list_append(&root->ifaces, node(entry));
 	return entry;
 }
 

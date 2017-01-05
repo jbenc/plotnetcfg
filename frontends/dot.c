@@ -42,14 +42,14 @@ static void output_label_properties(FILE *f, struct label_property *list, unsign
 			fprintf(f, "\\n%s: %s", ptr->key, ptr->value);
 }
 
-static void output_addresses(FILE *f, struct if_addr_entry *list)
+static void output_addresses(FILE *f, struct list *addresses)
 {
-	struct if_addr_entry *ptr;
+	struct if_addr *addr;
 
-	for (ptr = list; ptr; ptr = ptr->next) {
-		fprintf(f, "\\n%s", ptr->addr.formatted);
-		if (ptr->peer.formatted)
-			fprintf(f, " peer %s", ptr->peer.formatted);
+	list_for_each(addr, *addresses) {
+		fprintf(f, "\\n%s", addr->addr.formatted);
+		if (addr->peer.formatted)
+			fprintf(f, " peer %s", addr->peer.formatted);
 	}
 }
 
@@ -59,18 +59,18 @@ static void output_mtu(FILE *f, struct if_entry *ptr)
 		fprintf(f, "\\nMTU %d", ptr->mtu);
 }
 
-static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int prop_mask)
+static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_mask)
 {
 	struct if_entry *ptr;
 
-	for (ptr = list; ptr; ptr = ptr->next) {
+	list_for_each(ptr, *list) {
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
 			fprintf(f, " (%s)", ptr->driver);
 		output_label_properties(f, ptr->prop, prop_mask);
 		output_mtu(f, ptr);
 		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {
-			output_addresses(f, ptr->addr);
+			output_addresses(f, &ptr->addr);
 			if ((ptr->flags & IF_LOOPBACK) == 0 && ptr->mac_addr.formatted)
 				fprintf(f, "\nmac %s", ptr->mac_addr.formatted);
 		}
@@ -92,11 +92,11 @@ static void output_ifaces_pass1(FILE *f, struct if_entry *list, unsigned int pro
 	}
 }
 
-static void output_ifaces_pass2(FILE *f, struct if_entry *list)
+static void output_ifaces_pass2(FILE *f, struct list *list)
 {
 	struct if_entry *ptr;
 
-	for (ptr = list; ptr; ptr = ptr->next) {
+	list_for_each(ptr, *list) {
 		if (ptr->master) {
 			fprintf(f, "\"%s\" -> ", ifid(ptr));
 			fprintf(f, "\"%s\" [style=%s", ifid(ptr->master),
@@ -157,12 +157,12 @@ static void dot_output(FILE *f, struct netns_entry *root, struct output_entry *o
 			fprintf(f, "label=\"%s\"\n", ns->name);
 			fprintf(f, "fontcolor=\"black\"\n");
 		}
-		output_ifaces_pass1(f, ns->ifaces, output_entry->print_mask);
+		output_ifaces_pass1(f, &ns->ifaces, output_entry->print_mask);
 		if (ns->name)
 			fprintf(f, "}\n");
 	}
 	for (ns = root; ns; ns = ns->next) {
-		output_ifaces_pass2(f, ns->ifaces);
+		output_ifaces_pass2(f, &ns->ifaces);
 	}
 	output_warnings(f, root);
 	fprintf(f, "}\n");

@@ -304,17 +304,17 @@ error_conn:
 static int team_post(struct if_entry *master, _unused struct netns_entry *root)
 {
 	struct team_priv *priv = master->handler_private;
-	struct if_list_entry *le;
+	struct if_entry *slave;
 	const char *active_name;
 
 	if (!master->active_slave && priv->active_port_name) {
 		active_name = json_string_value(priv->active_port_name);
-		for (le = master->rev_master; le; le = le->next) {
-			if (strcmp(le->entry->if_name, active_name)) {
-				le->entry->flags |= IF_PASSIVE_SLAVE;
+		list_for_each_member(slave, master->rev_master, rev_master_node) {
+			if (strcmp(slave->if_name, active_name)) {
+				slave->flags |= IF_PASSIVE_SLAVE;
 			} else {
-				master->active_slave = le->entry;
-				if_add_state(master, "active port", "%s", le->entry->if_name);
+				master->active_slave = slave;
+				if_add_state(master, "active port", "%s", slave->if_name);
 			}
 		}
 	}
