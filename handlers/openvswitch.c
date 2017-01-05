@@ -44,7 +44,7 @@ static char *db;
 static unsigned int vport_genl_id;
 
 struct ovs_if {
-	struct ovs_if *next;
+	struct node n;
 	struct ovs_port *port;
 	struct if_entry *link;
 	char *name;
@@ -57,11 +57,11 @@ struct ovs_if {
 };
 
 struct ovs_port {
-	struct ovs_port *next;
+	struct node n;
 	struct ovs_bridge *bridge;
 	struct if_entry *link;
 	char *name;
-	struct ovs_if *ifaces;
+	struct list ifaces;
 	int iface_count;
 	/* vlan tags: */
 	unsigned int tag;
@@ -72,13 +72,13 @@ struct ovs_port {
 };
 
 struct ovs_bridge {
-	struct ovs_bridge *next;
+	struct node n;
 	char *name;
-	struct ovs_port *ports;
+	struct list ports;
 	struct ovs_port *system;
 };
 
-static struct ovs_bridge *br_list;
+static DECLARE_LIST(br_list);
 
 static int is_set(json_t *j)
 {
@@ -178,7 +178,6 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 				   struct ovs_bridge *br)
 {
 	struct ovs_port *port;
-	struct ovs_if *ptr = NULL; /* GCC false positive */
 	struct ovs_if *iface;
 	json_t *jport, *jarr;
 	unsigned int i;
@@ -196,6 +195,7 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 	port->bridge = br;
 	if (parse_port_info(port, jport))
 		return NULL;
+	list_init(&port->ifaces);
 	jarr = json_object_get(jport, "interfaces");
 	if (is_set(jarr)) {
 		jarr = json_array_get(jarr, 1);
@@ -204,11 +204,7 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 			if (!iface)
 				return NULL;
 			iface->port = port;
-			if (!port->ifaces)
-				port->ifaces = iface;
-			else
-				ptr->next = iface;
-			ptr = iface;
+			list_append(&port->ifaces, node(iface));
 			port->iface_count++;
 		}
 	} else {
@@ -216,7 +212,7 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 		if (!iface)
 			return NULL;
 		iface->port = port;
-		port->ifaces = iface;
+		list_append(&port->ifaces, node(iface));
 		port->iface_count = 1;
 	}
 
@@ -229,7 +225,6 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
 {
 	struct ovs_bridge *br;
-	struct ovs_port *ptr = NULL; /* GCC false positive */
 	struct ovs_port *port;
 	json_t *jbridge, *jarr;
 	unsigned int i;
@@ -244,6 +239,7 @@ static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
 	if (!br)
 		return NULL;
 	br->name = strdup(json_string_value(json_object_get(jbridge, "name")));
+	list_init(&br->ports);
 	jarr = json_object_get(jbridge, "ports");
 	if (is_set(jarr)) {
 		jarr = json_array_get(jarr, 1);
@@ -251,35 +247,33 @@ static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
 			port = parse_port(jresult, json_array_get(jarr, i), br);
 			if (!port)
 				return NULL;
-			if (!br->ports)
-				br->ports = port;
-			else
-				ptr->next = port;
-			ptr = port;
+			list_append(&br->ports, node(port));
 		}
 	} else
-		br->ports = parse_port(jresult, jarr, br);
-	if (!br->ports)
+		if ((port = parse_port(jresult, jarr, br)))
+			list_append(&br->ports, node(port));
+
+	if (list_empty(br->ports))
 		return NULL;
 	return br;
 }
 
-static struct ovs_bridge *parse(char *answer)
+static void parse(struct list *br_list, char *answer)
 {
-	struct ovs_bridge *list = NULL, *ptr, *br;
+	struct ovs_bridge *br;
 	json_t *jroot, *jresult, *jovs, *jarr;
 	unsigned int i;
 
 	jroot = json_loads(answer, 0, NULL);
 	if (!jroot)
-		return NULL;
+		return;
 	jresult = json_object_get(jroot, "result");
 	if (!jresult)
-		return NULL;
+		return;
 	/* TODO: add the rest of error handling */
 	jovs = json_object_get(jresult, "Open_vSwitch");
 	if (json_object_size(jovs) != 1)
-		return NULL;
+		return;
 	jovs = json_object_iter_value(json_object_iter(jovs));
 	jovs = json_object_get(jovs, "new");
 
@@ -289,17 +283,13 @@ static struct ovs_bridge *parse(char *answer)
 		for (i = 0; i < json_array_size(jarr); i++) {
 			br = parse_bridge(jresult, json_array_get(jarr, i));
 			if (!br)
-				return NULL;
-			if (!list)
-				list = br;
-			else
-				ptr->next = br;
-			ptr = br;
+				return;
+			list_append(br_list, node(br));
 		}
 	} else
-		list = parse_bridge(jresult, jarr);
+		if ((br = parse_bridge(jresult, jarr)))
+			list_append(br_list, node(br));
 	json_decref(jroot);
-	return list;
 }
 
 
@@ -432,7 +422,8 @@ out_hnd:
 static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
-	int search_for_system = !iface->port->bridge->system->ifaces->link;
+	struct ovs_if *master = list_head(iface->port->bridge->system->ifaces);
+	int search_for_system = !master->link;
 	int weight;
 
 	if (!search_for_system &&
@@ -456,12 +447,12 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	 * we check above. For older kernels, we need to be more clever.
 	 */
 	if (!search_for_system && !entry->master &&
-	    !check_vport(iface->port->bridge->system->ifaces->link->ns, entry))
+	    !check_vport(master->link->ns, entry))
 		return 0;
 
 	weight = 1;
 	if (!search_for_system) {
-		if (iface->port->bridge->system->ifaces->link->ns == entry->ns)
+		if (master->link->ns == entry->ns)
 			weight++;
 	} else {
 		if (!entry->ns->name)
@@ -595,7 +586,7 @@ static int link_ifaces(struct list *netns_list)
 	struct if_entry *master;
 	int err;
 
-	for (br = br_list; br; br = br->next) {
+	list_for_each(br, br_list) {
 		if (!br->system || !br->system->iface_count)
 			return label_add(&root->warnings,
 					 "Failed to find main interface for openvswitch bridge %s",
@@ -604,12 +595,12 @@ static int link_ifaces(struct list *netns_list)
 			return label_add(&root->warnings,
 					 "Main port for openvswitch bridge %s appears to have several interfaces",
 					 br->name);
-		if ((err = link_iface(br->system->ifaces, netns_list, 1)))
+		if ((err = link_iface(list_head(br->system->ifaces), netns_list, 1)))
 			return err;
-		for (port = br->ports; port; port = port->next) {
+		list_for_each(port, br->ports) {
 			if (port == br->system)
 				continue;
-			master = br->system->ifaces->link;
+			master = list_head(br->system->ifaces);
 			if (port->iface_count > 1) {
 				port->link = create_iface(port->name, port->bridge->name, root);
 				if (!port->link)
@@ -618,7 +609,7 @@ static int link_ifaces(struct list *netns_list)
 				master = port->link;
 				label_port_or_iface(port, port->link);
 			}
-			for (iface = port->ifaces; iface; iface = iface->next) {
+			list_for_each(iface, port->ifaces) {
 				if ((err = link_iface(iface, netns_list, 0)))
 					return err;
 				if (!iface->link) {
@@ -664,10 +655,10 @@ static int ovs_global_post(struct list *netns_list)
 	}
 	free(str);
 	str = read_all(fd);
-	br_list = parse(str);
+	parse(&br_list, str);
 	free(str);
 	close(fd);
-	if (!br_list)
+	if (list_empty(br_list))
 		return 0;
 	if ((err = link_ifaces(netns_list)))
 		return err;
@@ -686,13 +677,13 @@ static void destruct_port(struct ovs_port *port)
 {
 	free(port->name);
 	free(port->trunks);
-	slist_free(port->ifaces, (destruct_f)destruct_if);
+	list_free(&port->ifaces, (destruct_f)destruct_if);
 }
 
 static void destruct_bridge(struct ovs_bridge *br)
 {
 	free(br->name);
-	slist_free(br->ports, (destruct_f)destruct_port);
+	list_free(&br->ports, (destruct_f)destruct_port);
 }
 
 static int ovs_global_init(void)
@@ -711,7 +702,7 @@ static int ovs_global_init(void)
 
 static void ovs_global_cleanup(_unused struct list *netns_list)
 {
-	slist_free(br_list, (destruct_f)destruct_bridge);
+	list_free(&br_list, (destruct_f)destruct_bridge);
 }
 
 static struct global_handler gh_ovs = {
