@@ -171,13 +171,14 @@ static json_t *interfaces_to_array(struct list *list, struct output_entry *outpu
 	return ifarr;
 }
 
-static json_t *routes_to_array(struct route *rte)
+static json_t *routes_to_array(struct list *routes)
 {
 	json_t *ifarr, *ifobj;
 	struct rtmetric *rtm;
+	struct route *rte;
 
 	ifarr = json_array();
-	for (; rte; rte = rte->next) {
+	list_for_each(rte, *routes) {
 		ifobj = json_object();
 		if (rte->dst.family)
 			json_object_set_new(ifobj, "destination", json_string(rte->dst.formatted));
@@ -186,10 +187,10 @@ static json_t *routes_to_array(struct route *rte)
 			json_object_set_new(ifobj, "gateway", json_string(rte->gw.formatted));
 		if (rte->iif)
 			json_object_set_new(ifobj, "iif", json_string(ifid(rte->iif)));
-		if (rte->metrics) {
+		if (!list_empty(rte->metrics)) {
 			json_t *rtmetrics = json_object();
 
-			for (rtm = rte->metrics; rtm; rtm = rtm->next)
+			list_for_each(rtm, rte->metrics)
 				json_object_set_new(rtmetrics, route_metric(rtm->type), json_integer(rtm->value));
 
 			json_object_set_new(ifobj, "metrics", rtmetrics);
@@ -212,15 +213,16 @@ static json_t *routes_to_array(struct route *rte)
 	return ifarr;
 }
 
-static json_t *rtables_to_array(struct rtable *rt)
+static json_t *rtables_to_array(struct list *tables)
 {
+	struct rtable *rt;
 	json_t *ifarr, *ifobj;
 
 	ifarr = json_object();
-	for (; rt; rt = rt->next) {
+	list_for_each(rt, *tables) {
 		ifobj = json_object();
 		json_object_set_new(ifobj, "name", json_string(route_table(rt->id)));
-		json_object_set_new(ifobj, "routes", routes_to_array(rt->routes));
+		json_object_set_new(ifobj, "routes", routes_to_array(&rt->routes));
 		json_object_set_new(ifarr, rtid(rt), ifobj);
 	}
 
@@ -245,7 +247,7 @@ static void json_output(FILE *f, struct netns_entry *root, struct output_entry *
 		json_object_set_new(ns, "id", json_string(nsid(entry)));
 		json_object_set_new(ns, "name", json_string(entry->name ? entry->name : ""));
 		json_object_set_new(ns, "interfaces", interfaces_to_array(&entry->ifaces, output_entry));
-		json_object_set_new(ns, "routes", rtables_to_array(entry->rtables));
+		json_object_set_new(ns, "routes", rtables_to_array(&entry->rtables));
 		if (entry->warnings)
 			json_object_set_new(ns, "warnings", label_to_array(entry->warnings));
 		json_object_set_new(ns_list, nsid(entry), ns);

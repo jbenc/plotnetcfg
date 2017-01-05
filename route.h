@@ -17,29 +17,30 @@
 #define _ROUTE_H
 
 #include "addr.h"
+#include "list.h"
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 
 struct if_entry;
 
 struct rtmetric {
-	struct rtmetric *next;
+	struct node n;
 	int type, value;
 };
 
 struct route {
-	struct route *next;
+	struct node n;
 	struct if_entry *iif, *oif;
-	struct rtmetric *metrics;
+	struct list metrics;
 	struct addr dst, gw, prefsrc, src;
 	unsigned int iifindex, oifindex, priority;
 	unsigned char table_id, tos, protocol, type, family, scope;
 };
 
 struct rtable {
-	struct rtable *next;
+	struct node n;
 	int id;
-	struct route *routes, *tail;
+	struct list routes;
 };
 
 const char *route_metric(int type);

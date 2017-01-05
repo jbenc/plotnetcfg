@@ -41,7 +41,7 @@ void handler_route_register(void)
 	netns_handler_register(&h_route);
 }
 
-static int route_parse_metrics(struct rtmetric **metrics, struct rtattr *mxrta)
+static int route_parse_metrics(struct list *metrics, struct rtattr *mxrta)
 {
 	struct rtattr *tb [RTAX_MAX + 1];
 	struct rtmetric *rtm;
@@ -59,8 +59,7 @@ static int route_parse_metrics(struct rtmetric **metrics, struct rtattr *mxrta)
 
 		rtm->type = i;
 		rtm->value = NLA_GET_U32(tb[i]);
-		rtm->next = *metrics;
-		*metrics = rtm;
+		list_append(metrics, node(rtm));
 	}
 
 	return 0;
@@ -120,6 +119,8 @@ int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 	if (tb[RTA_PRIORITY])
 		r->priority = NLA_GET_U32(tb[RTA_PRIORITY]);
 
+
+	list_init(&r->metrics);
 	if (tb[RTA_METRICS])
 		if ((err = route_parse_metrics(&r->metrics, tb[RTA_METRICS])))
 			goto err_rte;
@@ -141,6 +142,7 @@ static int rtable_create(struct rtable **rtd, int id)
 		return ENOMEM;
 
 	rt->id = id;
+	list_init(&rt->routes);
 
 	*rtd = rt;
 	return 0;
@@ -164,10 +166,12 @@ int route_scan(struct netns_entry *ns)
 		struct nlmsghdr n;
 		struct rtmsg r;
 	} req;
-	struct rtable *rt, *tables [256];
+	struct rtable *tables [256];
 	struct route *r;
 	struct nlmsg_entry *dst, *nle;
 	int err, i;
+
+	list_init(&ns->rtables);
 
 	if ((err = rtnl_open(&hnd)))
 		return err;
@@ -194,22 +198,13 @@ int route_scan(struct netns_entry *ns)
 			if ((err = rtable_create(&tables[r->table_id], r->table_id)))
 				goto err_route;
 
-		rt = tables[r->table_id];
-
-		r->next = NULL;
-		if (rt->tail)
-			rt->tail->next = r;
-		else
-			rt->routes = r;
-		rt->tail = r;
+		list_append(&tables[r->table_id]->routes, node(r));
 		r = NULL;
 	}
 
 	for (i = 255; i >= 0; i--) {
-		if (!tables[i])
-			continue;
-		tables[i]->next = ns->rtables;
-		ns->rtables = tables[i];
+		if (tables[i])
+			list_append(&ns->rtables, node(tables[i]));
 	}
 
 err_route:
@@ -222,14 +217,17 @@ err_handle:
 	return err;
 }
 
+static void route_destruct(struct route *r)
+{
+	list_free(&r->metrics, NULL);
+}
+
 static void rtable_free(struct rtable *rt)
 {
-	if (rt->routes)
-		slist_free(rt->routes, NULL);
+	list_free(&rt->routes, (destruct_f) route_destruct);
 }
 
 static void route_cleanup(struct netns_entry *entry)
 {
-	if (entry->rtables)
-		slist_free(entry->rtables, (destruct_f) rtable_free);
+	list_free(&entry->rtables, (destruct_f) rtable_free);
 }

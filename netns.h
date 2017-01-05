@@ -40,7 +40,7 @@ struct netns_entry {
 	pid_t pid;
 	int fd;
 	struct netns_id *ids;
-	struct rtable *rtables;
+	struct list rtables;
 };
 
 int netns_list(struct netns_entry **result, int supported);
