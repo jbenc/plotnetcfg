@@ -16,6 +16,8 @@
 #ifndef _ARGS_H
 #define _ARGS_H
 
+#include "list.h"
+
 enum arg_type {
 	ARG_NONE,
 	ARG_INT,
@@ -32,7 +34,7 @@ union arg_action {
 };
 
 struct arg_option {
-	struct arg_option *next;
+	struct node n;
 	const char *long_name;
 	char short_name;
 	int has_arg;	/* see getopt(3) for possible values */

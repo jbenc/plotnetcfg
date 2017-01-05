@@ -19,20 +19,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-static struct arg_option *options = NULL;
-static struct arg_option *options_tail = NULL;
-static int options_count = 0;
+struct {
+	struct list list;
+	int count;
+} options = {
+	.list = LIST_INITIALIZER(options.list),
+	.count = 0
+};
 
 void arg_register(struct arg_option *opt)
 {
-	options_count++;
-	opt->next = NULL;
-	if (!options) {
-		options = options_tail = opt;
-		return;
-	}
-	options_tail->next = opt;
-	options_tail = opt;
+	options.count++;
+	list_append(&options.list, node(opt));
 }
 
 void arg_register_batch(struct arg_option *opt, int count)
@@ -52,12 +50,12 @@ int arg_parse(int argc, char **argv)
 	int res = 0;
 
 	/* construct parameter lists for getopt */
-	glong = calloc(options_count + 1, sizeof(*glong));
-	gshort = calloc(options_count * 3 + 1, 1);
+	glong = calloc(options.count + 1, sizeof(*glong));
+	gshort = calloc(options.count * 3 + 1, 1);
 	if (!glong || !gshort)
 		return 1;
 	glong_index = gshort_index = 0;
-	for (opt = options; opt; opt = opt->next) {
+	list_for_each(opt, options.list) {
 		if (opt->long_name) {
 			glong[glong_index].name = opt->long_name;
 			glong[glong_index].has_arg = opt->has_arg;
@@ -80,11 +78,9 @@ int arg_parse(int argc, char **argv)
 		}
 		/* find the respective arg_option */
 		if (!gshort_index) {
-			opt = options;
-			for (i = 0; i < glong_index; i++)
-				opt = opt->next;
+			opt = list_tail(options.list);
 		} else {
-			for (opt = options; opt; opt = opt->next)
+			list_for_each(opt, options.list)
 				if (opt->short_name == gshort_index)
 					break;
 			assert(opt);
@@ -150,7 +146,7 @@ void arg_get_help(arg_help_handler_t handler)
 	buf = malloc(HELP_BUF_SIZE);
 	if (!buf)
 		return;
-	for (opt = options; opt; opt = opt->next) {
+	list_for_each(opt, options.list) {
 		*buf = '\0';
 		size = HELP_BUF_SIZE;
 		if (opt->short_name) {
