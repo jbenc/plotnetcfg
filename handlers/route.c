@@ -21,10 +21,10 @@
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
+#include "../list.h"
 #include "../netlink.h"
 #include "../netns.h"
 #include "../route.h"
-#include "../utils.h"
 
 #include "../compat.h"
 
@@ -223,11 +223,11 @@ err_handle:
 static void rtable_free(struct rtable *rt)
 {
 	if (rt->routes)
-		list_free(rt->routes, NULL);
+		slist_free(rt->routes, NULL);
 }
 
 static void route_cleanup(struct netns_entry *entry)
 {
 	if (entry->rtables)
-		list_free(entry->rtables, (destruct_f) rtable_free);
+		slist_free(entry->rtables, (destruct_f) rtable_free);
 }

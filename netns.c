@@ -29,11 +29,11 @@
 #include <unistd.h>
 #include "handler.h"
 #include "if.h"
+#include "list.h"
 #include "master.h"
 #include "match.h"
 #include "netlink.h"
 #include "sysfs.h"
-#include "utils.h"
 
 #include "compat.h"
 
@@ -425,12 +425,12 @@ int netns_switch_root(void)
 static void netns_list_destruct(struct netns_entry *entry)
 {
 	netns_handler_cleanup(entry);
-	list_free(entry->ids, NULL);
+	slist_free(entry->ids, NULL);
 	if_list_free(entry->ifaces);
 	free(entry->name);
 }
 
 void netns_list_free(struct netns_entry *list)
 {
-	list_free(list, (destruct_f)netns_list_destruct);
+	slist_free(list, (destruct_f)netns_list_destruct);
 }

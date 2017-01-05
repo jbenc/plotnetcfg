@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "list.h"
 #include "utils.h"
 
 static int nl_open(struct nl_handle *hnd, int family)
@@ -67,7 +68,7 @@ void nl_close(struct nl_handle *hnd)
 
 void nlmsg_free(struct nlmsg_entry *entry)
 {
-	list_free(entry, NULL);
+	slist_free(entry, NULL);
 }
 
 int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)

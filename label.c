@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utils.h"
+#include "list.h"
 
 int label_add(struct label **list, char *fmt, ...)
 {
@@ -56,7 +56,7 @@ static void label_destruct(struct label *item)
 
 void label_free(struct label *list)
 {
-	list_free(list, (destruct_f)label_destruct);
+	slist_free(list, (destruct_f)label_destruct);
 }
 
 int label_add_property(struct label_property **prop, int type,
@@ -101,5 +101,5 @@ static void label_property_destruct(struct label_property *prop)
 
 void label_free_property(struct label_property *list)
 {
-	list_free(list, (destruct_f)label_property_destruct);
+	slist_free(list, (destruct_f)label_property_destruct);
 }

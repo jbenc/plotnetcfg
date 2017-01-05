@@ -1,6 +1,6 @@
 /*
  * This file is a part of plotnetcfg, a tool to visualize network config.
- * Copyright (C) 2014 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
+ * Copyright (C) 2016 Red Hat, Inc. -- Ondrej Hlavaty <ohlavaty@redhat.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -13,22 +13,28 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _UTILS_H
-#define _UTILS_H
+#ifndef _LIST_H
+#define _LIST_H
 
-struct if_entry;
-struct netns_entry;
-struct rtable;
+#include <stdlib.h>
 
-#define _unused __attribute__((unused))
+/*
+ * Provided for compatibility, until all code is transformed to lists.
+ */
+typedef void (*destruct_f)(void *);
 
-#define ARRAY_SIZE(a)	(sizeof(a) / sizeof(*a))
+static inline void slist_free(void *list, destruct_f destruct)
+{
+	struct generic_list {
+		struct generic_list *next;
+	} *cur, *next = list;
 
-
-/* Returns static buffer. */
-char *ifstr(struct if_entry *entry);
-char *ifid(struct if_entry *entry);
-char *nsid(struct netns_entry *entry);
-char *rtid(struct rtable *rt);
+	while ((cur = next)) {
+		next = cur->next;
+		if (destruct)
+			destruct(cur);
+		free(cur);
+	}
+}
 
 #endif

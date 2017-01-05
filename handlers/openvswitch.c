@@ -29,6 +29,7 @@
 #include "../handler.h"
 #include "../if.h"
 #include "../label.h"
+#include "../list.h"
 #include "../master.h"
 #include "../match.h"
 #include "../netlink.h"
@@ -676,13 +677,13 @@ static void destruct_port(struct ovs_port *port)
 {
 	free(port->name);
 	free(port->trunks);
-	list_free(port->ifaces, (destruct_f)destruct_if);
+	slist_free(port->ifaces, (destruct_f)destruct_if);
 }
 
 static void destruct_bridge(struct ovs_bridge *br)
 {
 	free(br->name);
-	list_free(br->ports, (destruct_f)destruct_port);
+	slist_free(br->ports, (destruct_f)destruct_port);
 }
 
 static int ovs_global_init(void)
@@ -701,7 +702,7 @@ static int ovs_global_init(void)
 
 static void ovs_global_cleanup(_unused struct netns_entry *root)
 {
-	list_free(br_list, (destruct_f)destruct_bridge);
+	slist_free(br_list, (destruct_f)destruct_bridge);
 }
 
 static struct global_handler gh_ovs = {

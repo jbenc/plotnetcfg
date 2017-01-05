@@ -27,6 +27,7 @@
 #include "ethtool.h"
 #include "handler.h"
 #include "label.h"
+#include "list.h"
 #include "netlink.h"
 #include "netns.h"
 #include "utils.h"
@@ -232,13 +233,13 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->edge_label);
 	mac_addr_destruct(&entry->mac_addr);
 	label_free_property(entry->prop);
-	list_free(entry->addr, (destruct_f)if_addr_destruct);
-	list_free(entry->rev_master, NULL);
+	slist_free(entry->addr, (destruct_f)if_addr_destruct);
+	slist_free(entry->rev_master, NULL);
 }
 
 void if_list_free(struct if_entry *list)
 {
-	list_free(list, (destruct_f)if_list_destruct);
+	slist_free(list, (destruct_f)if_list_destruct);
 }
 
 void if_append(struct if_entry **list, struct if_entry *item)
