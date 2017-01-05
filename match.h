@@ -16,29 +16,53 @@
 #ifndef _MATCH_H
 #define _MATCH_H
 
+#include <string.h>
+
 struct if_entry;
 struct netns_entry;
 
-/* Find interface using a heuristic.
- * Callback returns 0 to ignore the interface, < 0 for error, > 0 for
- * priority.
- * The highest priority match is returned if exactly one highest priority
- * interface matches. Returns -1 if more highest priority interfaces match.
- * Returns 0 for success (*found will be NULL for no match) or error
- * code > 0.
- */
-int match_if_heur(struct if_entry **found,
-		  struct netns_entry *root, int all_ns,
-		  struct if_entry *self,
-		  int (*callback)(struct if_entry *, void *),
-		  void *arg);
+typedef int (*match_callback_f)(struct if_entry *, void *);
 
-/* Similar to match_if_heur, but returns first match. */
-int match_if(struct if_entry **found,
-	     struct netns_entry *root, int all_ns,
-	     struct if_entry *self,
-	     int (*callback)(struct if_entry *, void *),
-	     void *arg);
+#define MM_HEURISTIC	0
+#define MM_FIRST	1
+
+struct match_desc {
+	/* Mode of searching, heuristic by default */
+	int mode; /* MM_* */
+
+	/* Exclude one entry from result (e.g. self when finding peer) */
+	struct if_entry *exclude;
+
+	/* Search in netns list or one ns */
+	struct netns_entry *netns_list;
+	struct netns_entry *ns;
+
+	/* Internal. Use match_found and match_ambiguous functions. */
+	struct if_entry *found;
+	int best, count;
+};
+
+/* Find interface with various criteria. See match_desc for description.
+ *
+ * Compare callback:
+ * Returns > 0 as a priority of the match,
+ *           0 to ignore (not matched),
+ *         < 0 for error.
+ *
+ * The highest priority match is returned if exactly one highest priority
+ * interface matches.
+ * Returns 0 for success or error code > 0.
+ * Use match_found and match_is_ambiguous macros to retrieve result.
+ */
+int match_if(struct match_desc *desc, match_callback_f callback, void *arg);
+
+#define match_found(d)		((d).best > 0 ? (d).found : NULL)
+#define match_ambiguous(d)	((d).best > 0 && (d).count > 1)
+
+static inline void match_init(struct match_desc *desc)
+{
+	memset(desc, 0, sizeof(struct match_desc));
+}
 
 /* Find interface using netnsid. */
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,

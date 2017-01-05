@@ -40,22 +40,28 @@ struct if_entry *tunnel_find_str(struct netns_entry *ns, const char *addr)
 {
 	struct addr data;
 	char buf [16];
-	struct if_entry *result;
+	struct match_desc match;
 
 	data.raw = buf;
 	data.family = addr_parse_raw(data.raw, addr);
 	if (data.family < 0)
 		return NULL;
-	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, &data))
+
+	match_init(&match);
+	match.ns = ns;
+	if (match_if(&match, match_tunnel, &data))
 		return NULL;
-	return result;
+	return match_ambiguous(match) ? NULL : match_found(match);
 }
 
 struct if_entry *tunnel_find_addr(struct netns_entry *ns, struct addr *addr)
 {
-	struct if_entry *result;
+	struct match_desc match;
 
-	if (match_if_heur(&result, ns, 0, NULL, match_tunnel, addr))
+	match_init(&match);
+	match.ns = ns;
+
+	if (match_if(&match, match_tunnel, addr))
 		return NULL;
-	return result;
+	return match_ambiguous(match) ? NULL : match_found(match);
 }

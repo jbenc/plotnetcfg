@@ -19,70 +19,47 @@
 #include "master.h"
 #include "netns.h"
 
-int match_if_heur(struct if_entry **found,
-		  struct netns_entry *root, int all_ns,
-		  struct if_entry *self,
-		  int (*callback)(struct if_entry *, void *),
-		  void *arg)
+/* Matches only on desc->ns */
+static int match_if_ns(struct match_desc *desc, match_callback_f callback, void *arg)
 {
-	struct netns_entry *ns;
-	struct if_entry *entry;
-	int prio = 0, count = 0, res;
-
-	for (ns = root; ns; ns = ns->next) {
-		list_for_each(entry, root->ifaces) {
-			if (entry == self)
-				continue;
-			res = callback(entry, arg);
-			if (res < 0)
-				return -res;
-			if (res > prio) {
-				*found = entry;
-				prio = res;
-				count = 1;
-			} else if (res == prio)
-				count++;
-		}
-		if (!all_ns)
-			break;
-	}
-	if (!prio) {
-		*found = NULL;
-		return 0;
-	}
-	if (count > 1)
-		return -1;
-	return 0;
-}
-
-int match_if(struct if_entry **found,
-	     struct netns_entry *root, int all_ns,
-	     struct if_entry *self,
-	     int (*callback)(struct if_entry *, void *),
-	     void *arg)
-{
-	struct netns_entry *ns;
 	struct if_entry *entry;
 	int res;
 
-	for (ns = root; ns; ns = ns->next) {
-		list_for_each(entry, ns->ifaces) {
-			if (entry == self)
-				continue;
-			res = callback(entry, arg);
-			if (res < 0)
-				return -res;
-			if (res > 0) {
-				*found = entry;
+	list_for_each(entry, desc->ns->ifaces) {
+		if (entry == desc->exclude)
+			continue;
+		res = callback(entry, arg);
+		if (res < 0)
+			return -res;
+		if (res > desc->best) {
+			desc->found = entry;
+			desc->best = res;
+			desc->count = 1;
+			if (desc->mode == MM_FIRST)
 				return 0;
-			}
-		}
-		if (!all_ns)
-			break;
+		} else if (res == desc->best)
+			desc->count++;
 	}
 
-	*found = NULL;
 	return 0;
+}
+
+int match_if(struct match_desc *desc, match_callback_f callback, void *arg)
+{
+	struct netns_entry *ns;
+	int err;
+
+	if (desc->netns_list) {
+		for (ns = desc->netns_list; ns; ns = ns->next) {
+			desc->ns = ns;
+			if ((err = match_if_ns(desc, callback, arg)))
+				return err;
+		}
+		desc->ns = NULL;
+		return 0;
+	}
+
+	return match_if_ns(desc, callback, arg);
 }
 
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,

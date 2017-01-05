@@ -69,19 +69,23 @@ static int match_peer(struct if_entry *entry, void *arg)
 static int veth_post(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
-	struct if_entry *peer;
+	struct match_desc match;
 
 	if (entry->peer)
 		return 0;
 	if (!entry->peer_index)
 		return ENOENT;
-	err = match_if_heur(&peer, root, 1, entry, match_peer, entry);
-	if (err > 0)
+
+	match_init(&match);
+	match.netns_list = root;
+	match.exclude = entry;
+
+	if ((err = match_if(&match, match_peer, entry)))
 		return err;
-	if (err < 0)
+	if (match_ambiguous(match))
 		return if_add_warning(entry, "failed to find the veth peer reliably");
-	if (!peer)
+	if (!match_found(match))
 		return if_add_warning(entry, "failed to find the veth perr");
-	peer_set(entry, peer);
+	peer_set(entry, match_found(match));
 	return 0;
 }

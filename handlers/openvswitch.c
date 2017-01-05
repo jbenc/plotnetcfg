@@ -472,14 +472,19 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 
 static int link_iface(struct ovs_if *iface, struct netns_entry *root, int required)
 {
+	struct match_desc match;
 	int err;
 
 	if (iface->link)
 		return 0;
-	err = match_if_heur(&iface->link, root, 1, NULL, link_iface_search, iface);
-	if (err > 0)
+
+	match_init(&match);
+	match.netns_list = root;
+
+	if ((err = match_if(&match, link_iface_search, iface)))
 		return err;
-	if (err < 0)
+	iface->link = match_found(match);
+	if (match_ambiguous(match))
 		return label_add(&root->warnings,
 				 "Failed to map openvswitch interface %s reliably",
 				 iface->name);
@@ -563,16 +568,18 @@ static int link_patch_search(struct if_entry *entry, void *arg)
 static int link_patch(struct ovs_if *iface, struct netns_entry *root)
 {
 	int err;
-	struct if_entry *peer;
+	struct match_desc match;
 
-	err = match_if_heur(&peer, root, 1, NULL, link_patch_search, iface);
-	if (err > 0)
+	match_init(&match);
+	match.netns_list = root;
+
+	if ((err = match_if(&match, link_patch_search, iface)))
 		return err;
-	if (err < 0)
+	if (match_ambiguous(match))
 		return if_add_warning(iface->link, "failed to find openvswitch patch port peer reliably");
 
-	if (peer)
-		peer_set(iface->link, peer);
+	if (match_found(match))
+		peer_set(iface->link, match_found(match));
 	/* Ignore case when the peer is not found, it will be found from the
 	 * other side. */
 	return 0;

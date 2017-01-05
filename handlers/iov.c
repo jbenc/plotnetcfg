@@ -91,14 +91,19 @@ static int match_physfn(struct if_entry *physfn, void *arg)
 
 static int iov_post(struct if_entry *entry, struct netns_entry *root)
 {
+	struct match_desc match;
 	int err = 0;
 
 	if (entry->physfn || !entry->pci_physfn_path)
 		return 0;
-	err = match_if(&entry->physfn, root, 1, entry, match_physfn, entry);
-	if (err > 0)
+
+	match_init(&match);
+	match.mode = MM_FIRST;
+	match.netns_list = root;
+	match.exclude = entry;
+	if ((err = match_if(&match, match_physfn, entry)))
 		return err;
-	if (!entry->physfn)
+	if (!(entry->physfn = match_found(match)))
 		return if_add_warning(entry, "failed to find the iov physfn");
 	return 0;
 }

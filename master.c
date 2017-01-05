@@ -80,14 +80,11 @@ static int match_link(struct if_entry *entry, void *arg)
 	return 1;
 }
 
-static int err_msg(int err, const char *type, struct if_entry *entry,
-		   struct if_entry *check)
+static int err_msg(struct match_desc *match, const char *type, struct if_entry *entry)
 {
-	if (err > 0)
-		return err;
-	if (err < 0)
+	if (match_ambiguous(*match))
 		return if_add_warning(entry, "has a %s but failed to find it reliably", type);
-	if (!check)
+	if (!match_found(*match))
 		return if_add_warning(entry, "has a %s but failed to find it", type);
 	return 0;
 }
@@ -95,20 +92,26 @@ static int err_msg(int err, const char *type, struct if_entry *entry,
 static int process(struct if_entry *entry, struct netns_entry *root)
 {
 	int err;
-	struct if_entry *master, *link;
+	struct match_desc match;
+
+	match_init(&match);
+	match.netns_list = root;
+	match.exclude = entry;
 
 	if (!entry->master && entry->master_index) {
-		err = match_if_heur(&master, root, 1, entry, match_master, entry);
-		if ((err = err_msg(err, "master", entry, master)))
+		if ((err = match_if(&match, match_master, entry)))
 			return err;
-		if ((err = master_set(master, entry)))
+		if ((err = err_msg(&match, "master", entry)))
+			return err;
+		if ((err = master_set(match_found(match), entry)))
 			return err;
 	}
 	if (!entry->link && entry->link_index) {
-		err = match_if_heur(&link, root, 1, entry, match_link, entry);
-		if ((err = err_msg(err, "link", entry, link)))
+		if ((err = match_if(&match, match_link, entry)))
 			return err;
-		if ((err = link_set(link, entry)))
+		if ((err = err_msg(&match, "link", entry)))
+			return err;
+		if ((err = link_set(match_found(match), entry)))
 			return err;
 	}
 	return 0;
