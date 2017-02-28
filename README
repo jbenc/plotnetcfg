@@ -35,6 +35,8 @@ The following flags can be overridden during the build:
   Choose a different compiler (such as clang or an arm cross compiler)
 - EXTRA_CFLAGS
   Additional compilation flags to pass to the compiler
+- LDFLAGS
+  Additional linker flags
 
 Bugs:
 
@@ -43,3 +45,14 @@ Report bugs to jbenc@redhat.com. Patches are welcome.
 
 Contains code from iproute2, originally licensed under GPLv2 or later,
 http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2
+
+
+
+contrib:
+
+There is a directory with sample scripts and possible other data which may
+be found in contrib/
+
+contrib/retrieve-config.py is a sample python application which will connect to
+a number of hosts over ssh, build a static plotnetcfg version, transfer, and run
+plotnetcfg on the remote host.
