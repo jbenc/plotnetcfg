@@ -28,7 +28,7 @@ int label_add(struct list *labels, char *fmt, ...)
 	int err = ENOMEM;
 
 	va_start(ap, fmt);
-	new = calloc(sizeof(*new), 1);
+	new = calloc(1, sizeof(*new));
 	if (!new)
 		goto out;
 	if (vasprintf(&new->text, fmt, ap) < 0) {

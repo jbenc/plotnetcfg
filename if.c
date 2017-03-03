@@ -138,7 +138,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 			/* don't care about broadcast and anycast adresses */
 			continue;
 
-		entry = calloc(sizeof(struct if_addr), 1);
+		entry = calloc(1, sizeof(struct if_addr));
 		if (!entry)
 			return ENOMEM;
 
@@ -164,7 +164,7 @@ struct if_entry *if_create(void)
 {
 	struct if_entry *entry;
 
-	entry = calloc(sizeof(struct if_entry), 1);
+	entry = calloc(1, sizeof(struct if_entry));
 	if (!entry)
 		return NULL;
 

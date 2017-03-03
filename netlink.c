@@ -209,7 +209,7 @@ int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
 	int size;
 
 	size = NLA_ALIGN(orig_len) + NLA_HDRLEN + NLA_ALIGN(len);
-	*dest = calloc(size, 1);
+	*dest = calloc(1, size);
 	if (!*dest)
 		return 0;
 	if (orig_len)

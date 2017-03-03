@@ -77,7 +77,7 @@ static struct netns_entry *netns_create()
 {
 	struct netns_entry *ns;
 
-	ns = calloc(sizeof(struct netns_entry), 1);
+	ns = calloc(1, sizeof(struct netns_entry));
 	if (!ns)
 		return NULL;
 

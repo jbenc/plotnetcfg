@@ -112,7 +112,7 @@ static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 	jif = json_object_get(jif, json_string_value(json_array_get(uuid, 1)));
 	jif = json_object_get(jif, "new");
 
-	iface = calloc(sizeof(*iface), 1);
+	iface = calloc(1, sizeof(*iface));
 	if (!iface)
 		return NULL;
 	iface->name = strdup(json_string_value(json_object_get(jif, "name")));
@@ -188,7 +188,7 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 	jport = json_object_get(jport, json_string_value(json_array_get(uuid, 1)));
 	jport = json_object_get(jport, "new");
 
-	port = calloc(sizeof(*port), 1);
+	port = calloc(1, sizeof(*port));
 	if (!port)
 		return NULL;
 	port->name = strdup(json_string_value(json_object_get(jport, "name")));
@@ -235,7 +235,7 @@ static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
 	jbridge = json_object_get(jbridge, json_string_value(json_array_get(uuid, 1)));
 	jbridge = json_object_get(jbridge, "new");
 
-	br = calloc(sizeof(*br), 1);
+	br = calloc(1, sizeof(*br));
 	if (!br)
 		return NULL;
 	br->name = strdup(json_string_value(json_object_get(jbridge, "name")));
