@@ -490,21 +490,29 @@ static int link_iface(struct ovs_if *iface, struct list *netns_list, int require
 static struct if_entry *create_iface(char *name, char *br_name, struct netns_entry *root)
 {
 	struct if_entry *entry;
-	char buf[IFNAMSIZ + 4 + 1];
 
-	entry = calloc(sizeof(*entry), 1);
+	entry = if_create();
 	if (!entry)
 		return NULL;
-	entry->ns = root;
-	snprintf(buf, sizeof(buf), "ovs:%s", br_name);
-	entry->internal_ns = strdup(buf);
-	entry->if_name = strdup(name);
-	if (!entry->internal_ns || !entry->if_name)
-		return NULL;
-	entry->flags |= IF_INTERNAL;
 
+	asprintf(&entry->internal_ns, "ovs:%s", br_name);
+	if (!entry->internal_ns)
+		goto err_entry;
+
+	entry->if_name = strdup(name);
+	if (!entry->if_name)
+		goto err_name;
+
+	entry->ns = root;
+	entry->flags |= IF_INTERNAL;
 	list_append(&root->ifaces, node(entry));
 	return entry;
+
+err_name:
+	free(entry->if_name);
+err_entry:
+	free(entry);
+	return NULL;
 }
 
 static void label_iface(struct ovs_if *iface)

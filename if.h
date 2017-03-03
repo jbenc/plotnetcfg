@@ -72,6 +72,7 @@ struct if_entry {
 
 int if_list(struct list *result, struct netns_entry *ns);
 void if_list_free(struct list *list);
+struct if_entry *if_create(void);
 
 int if_add_warning(struct if_entry *entry, char *fmt, ...);
 

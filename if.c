@@ -160,7 +160,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 	return 0;
 }
 
-static struct if_entry *if_alloc(void)
+struct if_entry *if_create(void)
 {
 	struct if_entry *entry;
 
@@ -197,7 +197,7 @@ int if_list(struct list *result, struct netns_entry *ns)
 		return err;
 
 	for (l = linfo; l; l = l->next) {
-		entry = if_alloc();
+		entry = if_create();
 		if (!entry)
 			return ENOMEM;
 		entry->ns = ns;
