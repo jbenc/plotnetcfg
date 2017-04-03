@@ -582,7 +582,7 @@ static int link_ifaces(struct list *netns_list)
 	struct netns_entry *root = list_head(*netns_list);
 	struct ovs_bridge *br;
 	struct ovs_port *port;
-	struct ovs_if *iface;
+	struct ovs_if *iface, *ovs_master;
 	struct if_entry *master;
 	int err;
 
@@ -600,7 +600,8 @@ static int link_ifaces(struct list *netns_list)
 		list_for_each(port, br->ports) {
 			if (port == br->system)
 				continue;
-			master = list_head(br->system->ifaces);
+			ovs_master = list_head(br->system->ifaces);
+			master = ovs_master->link;
 			if (port->iface_count > 1) {
 				port->link = create_iface(port->name, port->bridge->name, root);
 				if (!port->link)
