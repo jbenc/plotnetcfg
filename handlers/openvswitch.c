@@ -100,6 +100,15 @@ static int is_empty(json_t *j)
 	return json_is_array(j) && is_set(j);
 }
 
+static void destruct_if(struct ovs_if *iface)
+{
+	free(iface->name);
+	free(iface->type);
+	free(iface->local_ip);
+	free(iface->remote_ip);
+	free(iface->peer);
+}
+
 static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 {
 	struct ovs_if *iface;
@@ -174,6 +183,16 @@ static int parse_port_info(struct ovs_port *port, json_t *jport)
 	return 0;
 }
 
+static void destruct_port(struct ovs_port *port)
+{
+	free(port->name);
+	free(port->trunks);
+	free(port->bond_mode);
+	free(port->trunks);
+	list_free(&port->ifaces, (destruct_f)destruct_if);
+}
+
+
 static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 				   struct ovs_bridge *br)
 {
@@ -193,16 +212,16 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 		return NULL;
 	port->name = strdup(json_string_value(json_object_get(jport, "name")));
 	port->bridge = br;
-	if (parse_port_info(port, jport))
-		return NULL;
 	list_init(&port->ifaces);
+	if (parse_port_info(port, jport))
+		goto err_port;
 	jarr = json_object_get(jport, "interfaces");
 	if (is_set(jarr)) {
 		jarr = json_array_get(jarr, 1);
 		for (i = 0; i < json_array_size(jarr); i++) {
 			iface = parse_iface(jresult, json_array_get(jarr, i));
 			if (!iface)
-				return NULL;
+				goto err_port;
 			iface->port = port;
 			list_append(&port->ifaces, node(iface));
 			port->iface_count++;
@@ -220,6 +239,9 @@ static struct ovs_port *parse_port(json_t *jresult, json_t *uuid,
 		br->system = port;
 
 	return port;
+err_port:
+	destruct_port(port);
+	return NULL;
 }
 
 static struct ovs_bridge *parse_bridge(json_t *jresult, json_t *uuid)
@@ -672,21 +694,6 @@ static int ovs_global_post(struct list *netns_list)
 	if ((err = link_ifaces(netns_list)))
 		return err;
 	return 0;
-}
-
-static void destruct_if(struct ovs_if *iface)
-{
-	free(iface->name);
-	free(iface->type);
-	free(iface->local_ip);
-	free(iface->remote_ip);
-}
-
-static void destruct_port(struct ovs_port *port)
-{
-	free(port->name);
-	free(port->trunks);
-	list_free(&port->ifaces, (destruct_f)destruct_if);
 }
 
 static void destruct_bridge(struct ovs_bridge *br)
