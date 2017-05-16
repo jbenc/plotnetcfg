@@ -71,7 +71,7 @@ void nlmsg_free(struct nlmsg_entry *entry)
 	slist_free(entry, NULL);
 }
 
-int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)
+static int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)
 {
 	struct sockaddr_nl sa = {
 		.nl_family = AF_NETLINK,
@@ -158,7 +158,7 @@ err_out:
 	return err;
 }
 
-int nl_check_interrupted_dump(struct nlmsg_entry *entry)
+static int nl_check_interrupted_dump(struct nlmsg_entry *entry)
 {
 	for (; entry; entry = entry->next)
 		if (entry->h.nlmsg_flags & NLM_F_DUMP_INTR)
