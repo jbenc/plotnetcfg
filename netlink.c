@@ -258,7 +258,19 @@ struct nlattr **nla_attrs(struct nlattr *nla, int len, int max)
 
 struct nlattr **nla_nested_attrs(struct nlattr *nla, int max)
 {
-	return nla_attrs((struct nlattr *)nla_read(nla), nla_len(nla), max);
+	struct nlattr **tb;
+	int len = nla_len(nla);
+
+	nla = (struct nlattr *)nla_read(nla);
+	tb = calloc(max + 1, sizeof(struct nlattr *));
+	if (!tb)
+		return NULL;
+	while (RTA_OK((struct rtattr *)nla, len)) {
+		if (nla->nla_type <= max)
+			tb[nla->nla_type] = nla;
+		nla = (struct nlattr *)RTA_NEXT((struct rtattr *)nla, len);
+	}
+	return tb;
 }
 
 int genl_open(struct nl_handle *hnd)
