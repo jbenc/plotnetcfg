@@ -192,29 +192,35 @@ int if_list(struct list *result, struct netns_entry *ns)
 		return err;
 	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETLINK, &linfo);
 	if (err)
-		return err;
+		goto out_close;
 	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETADDR, &ainfo);
 	if (err)
-		return err;
+		goto out_linfo;
 
 	for (l = linfo; l; l = l->next) {
 		entry = if_create();
-		if (!entry)
-			return ENOMEM;
+		if (!entry) {
+			err = ENOMEM;
+			goto out_ainfo;
+		}
+		list_append(result, node(entry));
 		entry->ns = ns;
 		if ((err = fill_if_link(entry, &l->h)))
-			return err;
+			goto out_ainfo;
 		if ((err = fill_if_addr(entry, ainfo)))
-			return err;
+			goto out_ainfo;
 		if ((err = if_handler_scan(entry)))
-			return err;
-		list_append(result, node(entry));
+			goto out_ainfo;
 	}
+	err = 0;
 
-	nlmsg_free(linfo);
+out_ainfo:
 	nlmsg_free(ainfo);
+out_linfo:
+	nlmsg_free(linfo);
+out_close:
 	nl_close(&hnd);
-	return 0;
+	return err;
 }
 
 static void if_addr_destruct(struct if_addr *entry)
