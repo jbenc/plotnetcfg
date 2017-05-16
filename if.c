@@ -71,11 +71,12 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	if (tb[IFLA_LINKINFO])
 		rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 
-	if(tb[IFLA_ADDRESS])
+	if (tb[IFLA_ADDRESS])
 		if ((err = mac_addr_fill_netlink(&dest->mac_addr,
 						 RTA_DATA(tb[IFLA_ADDRESS]),
 						 RTA_PAYLOAD(tb[IFLA_ADDRESS]))))
 			return err;
+	}
 
 	if (ifi->ifi_flags & IFF_LOOPBACK) {
 		dest->driver = strdup("loopback");
