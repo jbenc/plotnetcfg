@@ -43,19 +43,23 @@ void handler_route_register(void)
 
 static int route_parse_metrics(struct list *metrics, struct nlattr *mxrta)
 {
-	struct nlattr *tb [RTAX_MAX + 1];
+	struct nlattr **tb;
 	struct rtmetric *rtm;
 	int i;
 
-	nla_parse_nested(tb, RTAX_MAX, mxrta);
+	tb = nla_nested_attrs(mxrta, RTAX_MAX);
+	if (!tb)
+		return ENOMEM;
 
 	for (i = 1; i <= RTAX_MAX; i++) {
 		if (!tb[i] || i == RTAX_CC_ALGO)
 			continue;
 
 		rtm = calloc(1, sizeof(struct rtmetric));
-		if (!rtm)
+		if (!rtm) {
+			free(tb);
 			return ENOMEM;
+		}
 
 		rtm->type = i;
 		rtm->value = nla_read_u32(tb[i]);
@@ -68,7 +72,7 @@ static int route_parse_metrics(struct list *metrics, struct nlattr *mxrta)
 int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 {
 	struct rtmsg *rtmsg = NLMSG_DATA(n);
-	struct nlattr *tb[RTA_MAX + 1];
+	struct nlattr **tb;
 	struct route *r;
 	int len = n->nlmsg_len;
 	int err;
@@ -92,7 +96,11 @@ int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 	r->tos = rtmsg->rtm_tos;
 	r->type = rtmsg->rtm_type;
 
-	nla_parse(tb, RTA_MAX, RTM_RTA(rtmsg), len);
+	tb = nla_attrs(RTM_RTA(rtmsg), len, RTA_MAX);
+	if (!tb) {
+		err = ENOMEM;
+		goto err_rte;
+	}
 
 	if (tb[RTA_TABLE])
 		r->table_id = nla_read_u32(tb[RTA_TABLE]);
@@ -123,11 +131,14 @@ int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 	list_init(&r->metrics);
 	if (tb[RTA_METRICS])
 		if ((err = route_parse_metrics(&r->metrics, tb[RTA_METRICS])))
-			goto err_rte;
+			goto err_tb;
 
 	*rte = r;
+	free(tb);
 	return 0;
 
+err_tb:
+	free(tb);
 err_rte:
 	free(r);
 	return err;

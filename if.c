@@ -36,8 +36,7 @@
 static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 {
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
-	struct nlattr *tb[IFLA_MAX + 1];
-	struct nlattr *linkinfo[IFLA_INFO_MAX + 1];
+	struct nlattr **tb, **linkinfo = NULL;
 	int len = n->nlmsg_len;
 	int err;
 
@@ -46,13 +45,19 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 	if (len < 0)
 		return ENOENT;
-	nla_parse(tb, IFLA_MAX, IFLA_RTA(ifi), len);
-	if (tb[IFLA_IFNAME] == NULL)
-		return ENOENT;
+	tb = nla_attrs(IFLA_RTA(ifi), len, IFLA_MAX);
+	if (!tb)
+		return ENOMEM;
+	if (!tb[IFLA_IFNAME]) {
+		err = ENOENT;
+		goto out;
+	}
 	dest->if_index = ifi->ifi_index;
 	dest->if_name = strdup(nla_read_str(tb[IFLA_IFNAME]));
-	if (!dest->if_name)
-		return ENOMEM;
+	if (!dest->if_name) {
+		err = ENOMEM;
+		goto err_ifname;
+	}
 	if (ifi->ifi_flags & IFF_UP) {
 		dest->flags |= IF_UP;
 		if (ifi->ifi_flags & IFF_RUNNING)
@@ -67,13 +72,18 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	}
 	if (tb[IFLA_MTU])
 		dest->mtu = nla_read_u32(tb[IFLA_MTU]);
-	if (tb[IFLA_LINKINFO])
-		nla_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
+	if (tb[IFLA_LINKINFO]) {
+		linkinfo = nla_nested_attrs(tb[IFLA_LINKINFO], IFLA_INFO_MAX);
+		if (!linkinfo) {
+			err = ENOMEM;
+			goto err_ifname;
+		}
+	}
 
 	if (tb[IFLA_ADDRESS]) {
 		err = mac_addr_fill_netlink(&dest->mac_addr, tb[IFLA_ADDRESS]);
 		if (err)
-			return err;
+			goto err_ifname;
 	}
 
 	if (ifi->ifi_flags & IFF_LOOPBACK) {
@@ -83,7 +93,7 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 		dest->driver = ethtool_driver(dest->if_name);
 	if (!dest->driver) {
 		/* No ethtool ops available, try IFLA_INFO_KIND */
-		if (tb[IFLA_LINKINFO] && linkinfo[IFLA_INFO_KIND])
+		if (tb[IFLA_LINKINFO] && linkinfo && linkinfo[IFLA_INFO_KIND])
 			dest->driver = strdup(RTA_DATA(linkinfo[IFLA_INFO_KIND]));
 	}
 	if (!dest->driver) {
@@ -96,17 +106,22 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	if ((err = if_handler_init(dest)))
 		goto err_driver;
 
-	if ((err = if_handler_netlink(dest, tb[IFLA_LINKINFO] ? linkinfo : NULL)))
+	if ((err = if_handler_netlink(dest, linkinfo)))
 		if (err != ENOENT)
 			goto err_driver;
 
-	return 0;
+	err = 0;
+	goto out;
 
 err_driver:
 	free(dest->driver);
 	dest->driver = NULL;
+err_ifname:
 	free(dest->if_name);
 	dest->if_name = NULL;
+out:
+	free(tb);
+	free(linkinfo);
 	return err;
 }
 
@@ -115,7 +130,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 	struct if_addr *entry;
 	struct nlmsghdr *n;
 	struct ifaddrmsg *ifa;
-	struct nlattr *rta_tb[IFA_MAX + 1];
+	struct nlattr **rta_tb;
 	int len, err;
 
 	for (; ainfo; ainfo = ainfo->next) {
@@ -132,31 +147,40 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 		    ifa->ifa_family != AF_INET6)
 			/* only IP addresses supported (at least for now) */
 			continue;
-		nla_parse(rta_tb, IFA_MAX, IFA_RTA(ifa), len);
+		err = ENOMEM;
+		rta_tb = nla_attrs(IFA_RTA(ifa), len, IFA_MAX);
+		if (!rta_tb)
+			goto err_tb;
 		if (!rta_tb[IFA_LOCAL] && !rta_tb[IFA_ADDRESS])
 			/* don't care about broadcast and anycast adresses */
-			continue;
+			goto skip;
 
 		entry = calloc(1, sizeof(struct if_addr));
 		if (!entry)
-			return ENOMEM;
+			goto err_tb;
+
+		list_append(&dest->addr, node(entry));
 
 		if (!rta_tb[IFA_LOCAL]) {
 			rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
 			rta_tb[IFA_ADDRESS] = NULL;
 		}
 		if ((err = addr_init_netlink(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
-			return err;
+			goto err_tb;
 		if (rta_tb[IFA_ADDRESS] &&
 		    memcmp(nla_read(rta_tb[IFA_ADDRESS]), nla_read(rta_tb[IFA_LOCAL]),
 			   ifa->ifa_family == AF_INET ? 4 : 16)) {
 			if ((err = addr_init_netlink(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
-				return err;
+				goto err_tb;
 		}
-
-		list_append(&dest->addr, node(entry));
+skip:
+		free(rta_tb);
 	}
 	return 0;
+
+err_tb:
+	free(rta_tb);
+	return err;
 }
 
 struct if_entry *if_create(void)

@@ -286,7 +286,7 @@ static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 		uint32_t fd;
 	} src;
 	struct nlmsg_entry *dst;
-	struct nlattr *tb[NETNSA_MAX + 1];
+	struct nlattr **tb;
 	int len, res;
 
 	memset(&src, 0, sizeof(src));
@@ -304,9 +304,12 @@ static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 	len = dst->h.nlmsg_len - NLMSG_SPACE(sizeof(struct rtgenmsg));
 	if (len < 0)
 		goto out;
-	nla_parse(tb, NETNSA_MAX, NETNS_NLA(NLMSG_DATA(&dst->h)), len);
+	tb = nla_attrs(NETNS_NLA(NLMSG_DATA(&dst->h)), len, NETNSA_MAX);
+	if (!tb)
+		goto out;
 	if (tb[NETNSA_NSID])
 		res = nla_read_s32(tb[NETNSA_NSID]);
+	free(tb);
 out:
 	nlmsg_free(dst);
 	return res;

@@ -75,7 +75,7 @@ static int vxlan_fill_addr(struct addr **addr, int ai_family, struct nlattr *att
 
 static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
-	struct nlattr *vxlaninfo[IFLA_VXLAN_MAX + 1];
+	struct nlattr **vxlaninfo;
 	uint16_t port;
 	struct vxlan_priv *priv;
 	int err;
@@ -91,7 +91,11 @@ static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		err = ENOENT;
 		goto err_priv;
 	}
-	nla_parse_nested(vxlaninfo, IFLA_VXLAN_MAX, linkinfo[IFLA_INFO_DATA]);
+	vxlaninfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_VXLAN_MAX);
+	if (!vxlaninfo) {
+		err = ENOMEM;
+		goto err_priv;
+	}
 
 	if (vxlaninfo[IFLA_VXLAN_ID])
 		if_add_config(entry, "VNI", "%u", nla_read_u32(vxlaninfo[IFLA_VXLAN_ID]));
@@ -111,17 +115,20 @@ static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 	} else {
 		/* These can be set in COLLECT_METADATA, but are ignored by kernel */
 		if ((err = vxlan_fill_addr(&priv->group, AF_INET, vxlaninfo[IFLA_VXLAN_GROUP])))
-			goto err_priv;
+			goto err_attrs;
 		if ((err = vxlan_fill_addr(&priv->group, AF_INET6, vxlaninfo[IFLA_VXLAN_GROUP6])))
-			goto err_priv;
+			goto err_attrs;
 		if ((err = vxlan_fill_addr(&priv->local, AF_INET, vxlaninfo[IFLA_VXLAN_LOCAL])))
-			goto err_priv;
+			goto err_attrs;
 		if ((err = vxlan_fill_addr(&priv->local, AF_INET6, vxlaninfo[IFLA_VXLAN_LOCAL6])))
-			goto err_priv;
+			goto err_attrs;
 	}
 
+	free(vxlaninfo);
 	return 0;
 
+err_attrs:
+	free(vxlaninfo);
 err_priv:
 	free(priv);
 err:

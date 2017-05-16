@@ -39,6 +39,8 @@ void nl_close(struct nl_handle *hnd);
 int nl_exchange(struct nl_handle *hnd,
 		struct nlmsghdr *src, struct nlmsg_entry **dest);
 void nlmsg_free(struct nlmsg_entry *entry);
+struct nlattr **nla_attrs(struct nlattr *nla, int len, int max);
+struct nlattr **nla_nested_attrs(struct nlattr *nla, int max);
 
 int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
 		void **dest);
@@ -82,8 +84,6 @@ static inline const char *nla_read_str(const struct nlattr *nla)
 
 int rtnl_open(struct nl_handle *hnd);
 int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest);
-void nla_parse(struct nlattr *tb[], int max, struct nlattr *nla, int len);
-void nla_parse_nested(struct nlattr *tb[], int max, struct nlattr *nla);
 
 /* genetlink */
 

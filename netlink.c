@@ -241,19 +241,24 @@ int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **
 	return nl_exchange(hnd, &req.n, dest);
 }
 
-void nla_parse(struct nlattr *tb[], int max, struct nlattr *nla, int len)
+struct nlattr **nla_attrs(struct nlattr *nla, int len, int max)
 {
-	memset(tb, 0, sizeof(struct nlattr *) * (max + 1));
+	struct nlattr **tb;
+
+	tb = calloc(max + 1, sizeof(struct nlattr *));
+	if (!tb)
+		return NULL;
 	while (RTA_OK((struct rtattr *)nla, len)) {
 		if (nla->nla_type <= max)
 			tb[nla->nla_type] = nla;
 		nla = (struct nlattr *)RTA_NEXT((struct rtattr *)nla, len);
 	}
+	return tb;
 }
 
-void nla_parse_nested(struct nlattr *tb[], int max, struct nlattr *nla)
+struct nlattr **nla_nested_attrs(struct nlattr *nla, int max)
 {
-	nla_parse(tb, max, (struct nlattr *)nla_read(nla), nla_len(nla));
+	return nla_attrs((struct nlattr *)nla_read(nla), nla_len(nla), max);
 }
 
 int genl_open(struct nl_handle *hnd)

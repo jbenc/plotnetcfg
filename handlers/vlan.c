@@ -42,15 +42,24 @@ void handler_vlan_register(void)
 static int vlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct vlan_private *priv = entry->handler_private;
-	struct nlattr *vlanattr[IFLA_VLAN_MAX + 1];
+	struct nlattr **vlanattr;
+	int err = 0;
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
-	nla_parse_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
-	if (!vlanattr[IFLA_VLAN_ID])
-		return ENOENT;
-	priv->tag = nla_read_u16(vlanattr[IFLA_VLAN_ID]);
-	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0)
+	vlanattr = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_VLAN_MAX);
+	if (!vlanattr)
 		return ENOMEM;
-	return 0;
+	if (!vlanattr[IFLA_VLAN_ID]) {
+		err = ENOENT;
+		goto out;
+	}
+	priv->tag = nla_read_u16(vlanattr[IFLA_VLAN_ID]);
+	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0) {
+		err = ENOMEM;
+		goto out;
+	}
+out:
+	free(vlanattr);
+	return err;
 }

@@ -67,11 +67,13 @@ void handler_bond_register(void)
 static int bond_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct bond_private *priv = entry->handler_private;
-	struct nlattr *bondinfo[IFLA_BOND_MAX + 1];
+	struct nlattr **bondinfo;
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
-	nla_parse_nested(bondinfo, IFLA_BOND_MAX, linkinfo[IFLA_INFO_DATA]);
+	bondinfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_BOND_MAX);
+	if (!bondinfo)
+		return ENOMEM;
 
 	if (bondinfo[IFLA_BOND_MODE]) {
 		priv->mode = nla_read_u8(bondinfo[IFLA_BOND_MODE]) + 1;
@@ -83,6 +85,7 @@ static int bond_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		priv->active_slave_index = nla_read_u32(bondinfo[IFLA_BOND_ACTIVE_SLAVE]);
 	}
 
+	free(bondinfo);
 	return 0;
 }
 
