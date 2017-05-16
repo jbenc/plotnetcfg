@@ -273,45 +273,33 @@ static int netns_add_proc_list(struct list *netns_list)
 	return 0;
 }
 
-#define NETNS_NLA(r) \
-	((struct nlattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct rtgenmsg))))
-
 /* Returns -1 if netnsids are not supported. */
 static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 {
-	struct {
-		struct nlmsghdr n;
-		struct rtgenmsg r;
-		struct nlattr a __attribute__ ((aligned(NLMSG_ALIGNTO)));
-		uint32_t fd;
-	} src;
-	struct nlmsg_entry *dst;
+	struct nlmsg *req, *resp;
 	struct nlattr **tb;
-	int len, res;
+	int res = -1;
 
-	memset(&src, 0, sizeof(src));
-	src.n.nlmsg_len = sizeof(src);
-	src.n.nlmsg_flags = NLM_F_REQUEST;
-	src.n.nlmsg_type = RTM_GETNSID;
-	src.r.rtgen_family = AF_UNSPEC;
-	src.a.nla_type = NETNSA_FD;
-	src.a.nla_len = RTA_LENGTH(sizeof(uint32_t));
-	src.fd = entry->fd;
-	res = nl_exchange(hnd, &src.n, &dst);
-	if (res || !dst)
+	req = rtnlmsg_new(RTM_GETNSID, AF_UNSPEC, 0, sizeof(struct rtgenmsg));
+	if (!req)
 		return -1;
-	res = -1;
-	len = dst->h.nlmsg_len - NLMSG_SPACE(sizeof(struct rtgenmsg));
-	if (len < 0)
-		goto out;
-	tb = nla_attrs(NETNS_NLA(NLMSG_DATA(&dst->h)), len, NETNSA_MAX);
+	if (nla_put_u32(req, NETNSA_FD, entry->fd))
+		goto out_req;
+	if (nl_exchange(hnd, req, &resp))
+		goto out_req;
+	if (!nlmsg_get(resp, sizeof(struct rtgenmsg)))
+		goto out_resp;
+	tb = nlmsg_attrs(resp, NETNSA_MAX);
 	if (!tb)
-		goto out;
+		goto out_resp;
 	if (tb[NETNSA_NSID])
 		res = nla_read_s32(tb[NETNSA_NSID]);
 	free(tb);
-out:
-	nlmsg_free(dst);
+
+out_resp:
+	nlmsg_free(resp);
+out_req:
+	nlmsg_free(req);
 	return res;
 }
 

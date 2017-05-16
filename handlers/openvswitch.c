@@ -404,10 +404,8 @@ static char *read_all(int fd)
 static int check_vport(struct netns_entry *ns, struct if_entry *entry)
 {
 	struct nl_handle hnd;
-	struct ovs_header oh;
-	void *payload;
-	struct nlmsg_entry *dest;
-	int len;
+	struct ovs_header oh = { .dp_ifindex = 0 };
+	struct nlmsg *req, *resp;
 	int err = ENOMEM;
 
 	/* Be paranoid. If anything goes wrong, assume the interace is not
@@ -421,21 +419,21 @@ static int check_vport(struct netns_entry *ns, struct if_entry *entry)
 	if (genl_open(&hnd))
 		return 0;
 
-	oh.dp_ifindex = 0;
-	len = nla_add_str(&oh, sizeof(oh), OVS_VPORT_ATTR_NAME, entry->if_name,
-			  &payload);
-	if (!len)
+	req = genlmsg_new(vport_genl_id, OVS_VPORT_CMD_GET, 0);
+	if (!req)
 		goto out_hnd;
-	err = genl_request(&hnd, vport_genl_id, OVS_VPORT_CMD_GET,
-			   payload, len, &dest);
+	if (nlmsg_put(req, &oh, sizeof(oh)) ||
+	    nla_put_str(req, OVS_VPORT_ATTR_NAME, entry->if_name))
+		goto out_req;
+	err = nl_exchange(&hnd, req, &resp);
 	if (err)
-		goto out_payload;
+		goto out_req;
 	/* Keep err = 0. We're only interested whether the call succeeds or
 	 * not, we don't care about the returned data.
 	 */
-	nlmsg_free(dest);
-out_payload:
-	free(payload);
+	nlmsg_free(resp);
+out_req:
+	nlmsg_free(req);
 out_hnd:
 	nl_close(&hnd);
 	return !err;

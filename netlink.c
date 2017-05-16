@@ -1,6 +1,6 @@
 /*
  * This file is a part of plotnetcfg, a tool to visualize network config.
- * Copyright (C) 2015 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
+ * Copyright (C) 2015-2017 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -14,6 +14,7 @@
  */
 
 #include "netlink.h"
+#include <assert.h>
 #include <errno.h>
 #include <linux/genetlink.h>
 #include <linux/netlink.h>
@@ -26,6 +27,8 @@
 #include <unistd.h>
 #include "list.h"
 #include "utils.h"
+
+#define NLMSG_BASIC_SIZE	16384
 
 int nl_open(struct nl_handle *hnd, int family)
 {
@@ -66,9 +69,142 @@ void nl_close(struct nl_handle *hnd)
 	close(hnd->fd);
 }
 
-void nlmsg_free(struct nlmsg_entry *entry)
+static struct nlmsg *nlmsg_alloc(unsigned int size)
 {
-	slist_free(entry, NULL);
+	struct nlmsg *msg;
+
+	msg = calloc(1, sizeof(*msg));
+	if (!msg)
+		return NULL;
+	msg->buf = malloc(size);
+	if (!msg->buf)
+		goto err_out;
+	msg->allocated = size;
+	return msg;
+
+err_out:
+	free(msg);
+	return NULL;
+}
+
+static int nlmsg_realloc(struct nlmsg *msg, unsigned int min_len)
+{
+	unsigned int new_alloc = msg->allocated;
+	void *new_buf;
+
+	if (new_alloc >= min_len)
+		return 0;
+	while (new_alloc < min_len)
+		new_alloc *= 2;
+	new_buf = realloc(msg->buf, new_alloc);
+	if (!new_buf)
+		return ENOMEM;
+	msg->buf = new_buf;
+	msg->allocated = new_alloc;
+	return 0;
+}
+
+void nlmsg_free(struct nlmsg *msg)
+{
+	struct nlmsg *next;
+
+	while (msg) {
+		next = msg->next;
+		free(msg->buf);
+		free(msg);
+		msg = next;
+	}
+}
+
+static int nlmsg_put_raw(struct nlmsg *msg, const void *data, int len, int padding)
+{
+	unsigned int new_len;
+	int err;
+
+	new_len = NLMSG_ALIGN(msg->len) + len + padding;
+	err = nlmsg_realloc(msg, new_len);
+	if (err)
+		return err;
+	/* zero out the alignment padding */
+	memset(msg->buf + msg->len, 0, NLMSG_ALIGN(msg->len) - msg->len);
+	/* put the new value */
+	memcpy(msg->buf + NLMSG_ALIGN(msg->len), data, len);
+	if (padding)
+		memset(msg->buf + NLMSG_ALIGN(msg->len) + len, 0, padding);
+	msg->len = new_len;
+	return 0;
+}
+
+int nlmsg_put(struct nlmsg *msg, const void *data, int len)
+{
+	int err;
+
+	err = nlmsg_put_raw(msg, data, len, 0);
+	if (err)
+		return err;
+	nlmsg_get_hdr(msg)->nlmsg_len = msg->len;
+	return 0;
+}
+
+static int nlmsg_put_padded(struct nlmsg *msg, const void *data, int len, int size)
+{
+	int err;
+
+	err = nlmsg_put_raw(msg, data, len, size - len);
+	if (err)
+		return err;
+	nlmsg_get_hdr(msg)->nlmsg_len = msg->len;
+	return 0;
+}
+
+void *nlmsg_get(struct nlmsg *msg, int len)
+{
+	void *res;
+
+	if (msg->len - msg->start < len)
+		return NULL;
+	res = msg->buf + msg->start;
+	msg->start += NLMSG_ALIGN(len);
+	return res;
+}
+
+void nlmsg_unget(struct nlmsg *msg, int len)
+{
+	len = NLMSG_ALIGN(len);
+	assert(msg->start >= len);
+	msg->start -= len;
+}
+
+struct nlmsg *nlmsg_new(int type, int flags)
+{
+	struct nlmsghdr hdr = { .nlmsg_type = type, .nlmsg_flags = flags };
+	struct nlmsg *msg;
+
+	hdr.nlmsg_flags |= NLM_F_REQUEST;
+	msg = nlmsg_alloc(NLMSG_BASIC_SIZE);
+	if (!msg)
+		return NULL;
+	if (nlmsg_put(msg, &hdr, sizeof(hdr))) {
+		nlmsg_free(msg);
+		return NULL;
+	}
+	return msg;
+}
+
+static void nlmsg_reset_start(struct nlmsg *msg)
+{
+	msg->start = NLMSG_ALIGN(sizeof(struct nlmsghdr));
+}
+
+int nla_put(struct nlmsg *msg, int type, const void *data, int len)
+{
+	struct nlattr a = { .nla_len = len + sizeof(struct nlattr),
+			    .nla_type = type };
+
+	if (nlmsg_put(msg, &a, sizeof(a)) ||
+	    nlmsg_put(msg, data, len))
+		return ENOMEM;
+	return 0;
 }
 
 static int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)
@@ -90,7 +226,7 @@ static int nl_send(struct nl_handle *hnd, struct iovec *iov, int iovlen)
 	return 0;
 }
 
-int nl_recv(struct nl_handle *hnd, struct nlmsg_entry **dest, int is_dump)
+static int nl_recv(struct nl_handle *hnd, struct nlmsg **dest, int is_dump)
 {
 	struct sockaddr_nl sa = {
 		.nl_family = AF_NETLINK,
@@ -105,8 +241,8 @@ int nl_recv(struct nl_handle *hnd, struct nlmsg_entry **dest, int is_dump)
 	char buf[16384];
 	int len, err;
 	struct nlmsghdr *n;
-	struct nlmsg_entry *ptr = NULL; /* GCC false positive */
-	struct nlmsg_entry *entry;
+	struct nlmsg *ptr = NULL; /* GCC false positive */
+	struct nlmsg *entry;
 
 	*dest = NULL;
 	while (1) {
@@ -136,18 +272,22 @@ int nl_recv(struct nl_handle *hnd, struct nlmsg_entry **dest, int is_dump)
 				err = -nlerr->error;
 				goto err_out;
 			}
-			entry = malloc(n->nlmsg_len + sizeof(void *));
+			entry = nlmsg_alloc(n->nlmsg_len);
 			if (!entry) {
 				err = ENOMEM;
 				goto err_out;
 			}
-			entry->next = NULL;
-			memcpy(&entry->h, n, n->nlmsg_len);
 			if (!*dest)
 				*dest = entry;
 			else
 				ptr->next = entry;
 			ptr = entry;
+
+			err = nlmsg_put_raw(entry, n, n->nlmsg_len, 0);
+			if (err)
+				goto err_out;
+			nlmsg_reset_start(entry);
+
 			if (!is_dump)
 				return 0;
 		}
@@ -158,26 +298,25 @@ err_out:
 	return err;
 }
 
-static int nl_check_interrupted_dump(struct nlmsg_entry *entry)
+static int nl_check_interrupted_dump(struct nlmsg *entry)
 {
 	for (; entry; entry = entry->next)
-		if (entry->h.nlmsg_flags & NLM_F_DUMP_INTR)
+		if (nlmsg_get_hdr(entry)->nlmsg_flags & NLM_F_DUMP_INTR)
 			return 1;
 	return 0;
 }
 
-int nl_exchange(struct nl_handle *hnd,
-		struct nlmsghdr *src, struct nlmsg_entry **dest)
+int nl_exchange(struct nl_handle *hnd, struct nlmsg *src, struct nlmsg **dest)
 {
 	struct iovec iov = {
-		.iov_base = src,
-		.iov_len = src->nlmsg_len,
+		.iov_base = src->buf,
+		.iov_len = src->len,
 	};
 	int is_dump;
 	int err;
 	int retry = 16;
 
-	is_dump = !!(src->nlmsg_flags & NLM_F_DUMP);
+	is_dump = !!(nlmsg_get_hdr(src)->nlmsg_flags & NLM_F_DUMP);
 	while (1) {
 		if (!retry--)
 			return EINTR;
@@ -199,51 +338,16 @@ int nl_exchange(struct nl_handle *hnd,
 	}
 }
 
-/* The original payload is not freed. Returns 0 in case of error, length
- * of *dest otherwise. *dest is newly allocated. */
-int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
-		void **dest)
-{
-	struct nlattr *nla;
-	int len = strlen(str) + 1;
-	int size;
-
-	size = NLA_ALIGN(orig_len) + NLA_HDRLEN + NLA_ALIGN(len);
-	*dest = calloc(1, size);
-	if (!*dest)
-		return 0;
-	if (orig_len)
-		memcpy(*dest, orig, orig_len);
-	nla = *dest + NLA_ALIGN(orig_len);
-	nla->nla_len = NLA_HDRLEN + len;
-	nla->nla_type = nla_type;
-	memcpy(nla + 1, str, len);
-	return size;
-}
-
 int rtnl_open(struct nl_handle *hnd)
 {
 	return nl_open(hnd, NETLINK_ROUTE);
 }
 
-int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest)
-{
-	struct {
-		struct nlmsghdr n;
-		struct ifinfomsg i;
-	} req;
-
-	memset(&req, 0, sizeof(req));
-	req.n.nlmsg_len = sizeof(req);
-	req.n.nlmsg_type = type;
-	req.n.nlmsg_flags = NLM_F_DUMP | NLM_F_REQUEST;
-	req.i.ifi_family = family;
-	return nl_exchange(hnd, &req.n, dest);
-}
-
-struct nlattr **nla_attrs(struct nlattr *nla, int len, int max)
+struct nlattr **nlmsg_attrs(struct nlmsg *msg, int max)
 {
 	struct nlattr **tb;
+	struct nlattr *nla = msg->buf + msg->start;
+	int len = msg->len - msg->start;
 
 	tb = calloc(max + 1, sizeof(struct nlattr *));
 	if (!tb)
@@ -273,72 +377,79 @@ struct nlattr **nla_nested_attrs(struct nlattr *nla, int max)
 	return tb;
 }
 
+struct nlmsg *rtnlmsg_new(int type, int family, int flags, int size)
+{
+	struct rtgenmsg g = { .rtgen_family = family };
+	struct nlmsg *res;
+
+	res = nlmsg_new(type, flags);
+	if (!res)
+		return NULL;
+	if (nlmsg_put_padded(res, &g, sizeof(g), size)) {
+		nlmsg_free(res);
+		return NULL;
+	}
+	return res;
+}
+
+int rtnl_ifi_dump(struct nl_handle *hnd, int type, int family, struct nlmsg **dest)
+{
+	struct nlmsg *req;
+	int err;
+
+	req = rtnlmsg_new(type, family, NLM_F_DUMP, sizeof(struct ifinfomsg));
+	if (!req)
+		return ENOMEM;
+	err = nl_exchange(hnd, req, dest);
+	nlmsg_free(req);
+	return err;
+}
+
 int genl_open(struct nl_handle *hnd)
 {
 	return nl_open(hnd, NETLINK_GENERIC);
 }
 
-int genl_request(struct nl_handle *hnd,
-		 int type, int cmd, void *payload, int payload_len,
-		 struct nlmsg_entry **dest)
+struct nlmsg *genlmsg_new(int type, int cmd, int flags)
 {
-	struct {
-		struct nlmsghdr n;
-		struct genlmsghdr g;
-	} req;
-	struct iovec iov[2];
-	int err;
+	struct genlmsghdr g = { .cmd = cmd, .version = 1 };
+	struct nlmsg *res;
 
-	memset(&req, 0, sizeof(req));
-	req.n.nlmsg_len = sizeof(req) + payload_len;
-	req.n.nlmsg_type = type;
-	req.n.nlmsg_flags = NLM_F_REQUEST;
-	req.g.cmd = cmd;
-	req.g.version = 1;
-
-	iov[0].iov_base = &req;
-	iov[0].iov_len = sizeof(req);
-	iov[1].iov_base = payload;
-	iov[1].iov_len = payload_len;
-	err = nl_send(hnd, iov, 2);
-	if (err)
-		return err;
-	return nl_recv(hnd, dest, 0);
+	res = nlmsg_new(type, flags);
+	if (!res)
+		return NULL;
+	if (nlmsg_put(res, &g, sizeof(g))) {
+		nlmsg_free(res);
+		return NULL;
+	}
+	return res;
 }
 
 unsigned int genl_family_id(struct nl_handle *hnd, const char *name)
 {
-	unsigned int res = 0;
-	struct nlattr *nla;
-	int len;
-	struct nlmsg_entry *dest;
-	void *ptr;
+	struct nlmsg *req, *resp;
+	struct nlattr **tb;
+	int res = 0;
 
-	len = nla_add_str(NULL, 0, CTRL_ATTR_FAMILY_NAME, name, &ptr);
-	if (!len)
+	req = genlmsg_new(GENL_ID_CTRL, CTRL_CMD_GETFAMILY, 0);
+	if (!req)
 		return 0;
-	if (genl_request(hnd, GENL_ID_CTRL, CTRL_CMD_GETFAMILY,
-			 ptr, len, &dest)) {
-		free(ptr);
-		return 0;
-	}
-	free(ptr);
+	if (nla_put_str(req, CTRL_ATTR_FAMILY_NAME, name))
+		goto out_req;
+	if (nl_exchange(hnd, req, &resp))
+		goto out_req;
+	if (!nlmsg_get(resp, sizeof(struct genlmsghdr)))
+		goto out_resp;
+	tb = nlmsg_attrs(resp, CTRL_ATTR_MAX);
+	if (!tb)
+		goto out_resp;
+	if (tb[CTRL_ATTR_FAMILY_ID])
+		res = nla_read_u16(tb[CTRL_ATTR_FAMILY_ID]);
+	free(tb);
 
-	len = dest->h.nlmsg_len - NLMSG_HDRLEN - GENL_HDRLEN;
-	ptr = (void *)&dest->h + NLMSG_HDRLEN + GENL_HDRLEN;
-
-	while (len > NLA_HDRLEN) {
-		nla = ptr;
-		if (nla->nla_type == CTRL_ATTR_FAMILY_ID &&
-		    nla->nla_len >= NLA_HDRLEN + 2) {
-			res = *(uint16_t *)(nla + 1);
-			break;
-		}
-
-		ptr += NLMSG_ALIGN(nla->nla_len);
-		len -= NLMSG_ALIGN(nla->nla_len);
-	}
-
-	nlmsg_free(dest);
+out_resp:
+	nlmsg_free(resp);
+out_req:
+	nlmsg_free(req);
 	return res;
 }

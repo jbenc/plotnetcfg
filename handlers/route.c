@@ -69,21 +69,20 @@ static int route_parse_metrics(struct list *metrics, struct nlattr *mxrta)
 	return 0;
 }
 
-int route_create_netlink(struct route **rte, struct nlmsghdr *n)
+int route_create_netlink(struct route **rte, struct nlmsg *msg)
 {
-	struct rtmsg *rtmsg = NLMSG_DATA(n);
+	struct rtmsg *rtmsg;
 	struct nlattr **tb;
 	struct route *r;
-	int len = n->nlmsg_len;
 	int err;
 
 	*rte = NULL;
 
-	if (n->nlmsg_type != RTM_NEWROUTE)
+	if (nlmsg_get_hdr(msg)->nlmsg_type != RTM_NEWROUTE)
 		return ENOENT;
 
-	len -= NLMSG_LENGTH(sizeof(*rtmsg));
-	if (len < 0)
+	rtmsg = nlmsg_get(msg, sizeof(*rtmsg));
+	if (!rtmsg)
 		return ENOENT;
 
 	r = calloc(1, sizeof(struct route));
@@ -96,7 +95,7 @@ int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 	r->tos = rtmsg->rtm_tos;
 	r->type = rtmsg->rtm_type;
 
-	tb = nla_attrs(RTM_RTA(rtmsg), len, RTA_MAX);
+	tb = nlmsg_attrs(msg, RTA_MAX);
 	if (!tb) {
 		err = ENOMEM;
 		goto err_rte;
@@ -173,34 +172,37 @@ static struct if_entry *find_if_by_ifindex(struct list *list, unsigned int ifind
 int route_scan(struct netns_entry *ns)
 {
 	struct nl_handle hnd;
-	struct {
-		struct nlmsghdr n;
-		struct rtmsg r;
-	} req;
+	struct nlmsg *req, *resp;
+	struct rtmsg msg = {
+		.rtm_table = RT_TABLE_UNSPEC,
+		.rtm_protocol = RTPROT_UNSPEC,
+	};
 	struct rtable *tables [256];
 	struct route *r;
-	struct nlmsg_entry *dst, *nle;
 	int err, i;
 
+	memset(tables, 0, sizeof(tables));
 	list_init(&ns->rtables);
 
 	if ((err = rtnl_open(&hnd)))
 		return err;
 
-	memset(&req, 0, sizeof(req));
-	memset(&tables, 0, sizeof(tables));
-	req.n.nlmsg_len = sizeof(req);
-	req.n.nlmsg_type = RTM_GETROUTE;
-	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-	req.r.rtm_table = RT_TABLE_UNSPEC;
-	req.r.rtm_protocol = RTPROT_UNSPEC;
-
-	if ((err = nl_exchange(&hnd, &req.n, &dst)))
+	req = nlmsg_new(RTM_GETROUTE, NLM_F_DUMP);
+	if (!req) {
+		err = ENOMEM;
 		goto err_handle;
+	}
+	err = nlmsg_put(req, &msg, sizeof(msg));
+	if (err)
+		goto err_req;
 
-	for (nle = dst; nle; nle = nle->next) {
-		if ((err = route_create_netlink(&r, &nle->h)))
-			goto err_dst;
+	err = nl_exchange(&hnd, req, &resp);
+	if (err)
+		goto err_req;
+
+	for_each_nlmsg(nle, resp) {
+		if ((err = route_create_netlink(&r, nle)))
+			goto err_resp;
 
 		r->oif = find_if_by_ifindex(&ns->ifaces, r->oifindex);
 		r->iif = find_if_by_ifindex(&ns->ifaces, r->iifindex);
@@ -221,8 +223,10 @@ int route_scan(struct netns_entry *ns)
 err_route:
 	if (r)
 		free(r);
-err_dst:
-	nlmsg_free(dst);
+err_resp:
+	nlmsg_free(resp);
+err_req:
+	nlmsg_free(req);
 err_handle:
 	nl_close(&hnd);
 	return err;

@@ -33,19 +33,18 @@
 
 #include "compat.h"
 
-static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
+static int fill_if_link(struct if_entry *dest, struct nlmsg *msg)
 {
-	struct ifinfomsg *ifi = NLMSG_DATA(n);
+	struct ifinfomsg *ifi;
 	struct nlattr **tb, **linkinfo = NULL;
-	int len = n->nlmsg_len;
 	int err;
 
-	if (n->nlmsg_type != RTM_NEWLINK)
+	if (nlmsg_get_hdr(msg)->nlmsg_type != RTM_NEWLINK)
 		return ENOENT;
-	len -= NLMSG_LENGTH(sizeof(*ifi));
-	if (len < 0)
+	ifi = nlmsg_get(msg, sizeof(*ifi));
+	if (!ifi)
 		return ENOENT;
-	tb = nla_attrs(IFLA_RTA(ifi), len, IFLA_MAX);
+	tb = nlmsg_attrs(msg, IFLA_MAX);
 	if (!tb)
 		return ENOMEM;
 	if (!tb[IFLA_IFNAME]) {
@@ -125,39 +124,41 @@ out:
 	return err;
 }
 
-static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
+static int fill_if_addr(struct if_entry *dest, struct nlmsg *alist)
 {
 	struct if_addr *entry;
-	struct nlmsghdr *n;
 	struct ifaddrmsg *ifa;
 	struct nlattr **rta_tb;
-	int len, err;
+	int err;
 
-	for (; ainfo; ainfo = ainfo->next) {
-		n = &ainfo->h;
-		ifa = NLMSG_DATA(n);
+	for_each_nlmsg(ainfo, alist) {
+		rta_tb = NULL;
+		err = 0;
+		ifa = nlmsg_get(ainfo, sizeof(*ifa));
+		if (!ifa)
+			return ENOENT;
 		if (ifa->ifa_index != dest->if_index)
-			continue;
-		if (n->nlmsg_type != RTM_NEWADDR)
-			continue;
-		len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
-		if (len < 0)
-			continue;
+			goto skip;
+		if (nlmsg_get_hdr(ainfo)->nlmsg_type != RTM_NEWADDR)
+			goto skip;
 		if (ifa->ifa_family != AF_INET &&
 		    ifa->ifa_family != AF_INET6)
 			/* only IP addresses supported (at least for now) */
-			continue;
-		err = ENOMEM;
-		rta_tb = nla_attrs(IFA_RTA(ifa), len, IFA_MAX);
-		if (!rta_tb)
-			goto err_tb;
+			goto skip;
+		rta_tb = nlmsg_attrs(ainfo, IFA_MAX);
+		if (!rta_tb) {
+			err = ENOMEM;
+			goto skip;
+		}
 		if (!rta_tb[IFA_LOCAL] && !rta_tb[IFA_ADDRESS])
 			/* don't care about broadcast and anycast adresses */
 			goto skip;
 
 		entry = calloc(1, sizeof(struct if_addr));
-		if (!entry)
-			goto err_tb;
+		if (!entry) {
+			err = ENOMEM;
+			goto skip;
+		}
 
 		list_append(&dest->addr, node(entry));
 
@@ -166,21 +167,21 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 			rta_tb[IFA_ADDRESS] = NULL;
 		}
 		if ((err = addr_init_netlink(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
-			goto err_tb;
+			goto skip;
 		if (rta_tb[IFA_ADDRESS] &&
 		    memcmp(nla_read(rta_tb[IFA_ADDRESS]), nla_read(rta_tb[IFA_LOCAL]),
 			   ifa->ifa_family == AF_INET ? 4 : 16)) {
 			if ((err = addr_init_netlink(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
-				goto err_tb;
+				goto skip;
 		}
 skip:
-		free(rta_tb);
+		nlmsg_unget(ainfo, sizeof(*ifa));
+		if (rta_tb)
+			free(rta_tb);
+		if (err)
+			return err;
 	}
 	return 0;
-
-err_tb:
-	free(rta_tb);
-	return err;
 }
 
 struct if_entry *if_create(void)
@@ -204,7 +205,7 @@ struct if_entry *if_create(void)
 int if_list(struct list *result, struct netns_entry *ns)
 {
 	struct nl_handle hnd;
-	struct nlmsg_entry *linfo, *ainfo, *l;
+	struct nlmsg *linfo, *ainfo;
 	struct if_entry *entry;
 	int err;
 
@@ -212,14 +213,14 @@ int if_list(struct list *result, struct netns_entry *ns)
 
 	if ((err = rtnl_open(&hnd)))
 		return err;
-	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETLINK, &linfo);
+	err = rtnl_ifi_dump(&hnd, RTM_GETLINK, AF_UNSPEC, &linfo);
 	if (err)
 		goto out_close;
-	err = rtnl_dump(&hnd, AF_UNSPEC, RTM_GETADDR, &ainfo);
+	err = rtnl_ifi_dump(&hnd, RTM_GETADDR, AF_UNSPEC, &ainfo);
 	if (err)
 		goto out_linfo;
 
-	for (l = linfo; l; l = l->next) {
+	for_each_nlmsg(l, linfo) {
 		entry = if_create();
 		if (!entry) {
 			err = ENOMEM;
@@ -227,7 +228,7 @@ int if_list(struct list *result, struct netns_entry *ns)
 		}
 		list_append(result, node(entry));
 		entry->ns = ns;
-		if ((err = fill_if_link(entry, &l->h)))
+		if ((err = fill_if_link(entry, l)))
 			goto out_ainfo;
 		if ((err = fill_if_addr(entry, ainfo)))
 			goto out_ainfo;

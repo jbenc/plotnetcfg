@@ -1,6 +1,6 @@
 /*
  * This file is a part of plotnetcfg, a tool to visualize network config.
- * Copyright (C) 2015 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
+ * Copyright (C) 2015-2017 Red Hat, Inc. -- Jiri Benc <jbenc@redhat.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,23 +28,59 @@ struct nl_handle {
 	unsigned int seq;
 };
 
-struct nlmsg_entry {
-	struct nlmsg_entry *next;
-	struct nlmsghdr h;
+struct nlmsg {
+	struct nlmsg *next;
+	void *buf;
+	int start;
+	int len;
+	int allocated;
 };
+
+#define nlmsg_get_hdr(n)	((struct nlmsghdr *)(n)->buf)
 
 /* all netlink families */
 
 int nl_open(struct nl_handle *hnd, int family);
 void nl_close(struct nl_handle *hnd);
-int nl_exchange(struct nl_handle *hnd,
-		struct nlmsghdr *src, struct nlmsg_entry **dest);
-void nlmsg_free(struct nlmsg_entry *entry);
-struct nlattr **nla_attrs(struct nlattr *nla, int len, int max);
+int nl_exchange(struct nl_handle *hnd, struct nlmsg *src, struct nlmsg **dest);
+
+struct nlmsg *nlmsg_new(int type, int flags);
+void nlmsg_free(struct nlmsg *msg);
+int nlmsg_put(struct nlmsg *msg, const void *data, int len);
+void *nlmsg_get(struct nlmsg *msg, int len);
+void nlmsg_unget(struct nlmsg *msg, int len);
+struct nlattr **nlmsg_attrs(struct nlmsg *msg, int max);
 struct nlattr **nla_nested_attrs(struct nlattr *nla, int max);
 
-int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
-		void **dest);
+#define for_each_nlmsg(iter, msg)				\
+	for (struct nlmsg *iter = (msg); iter; iter = iter->next)
+
+int nla_put(struct nlmsg *msg, int type, const void *data, int len);
+
+static inline int nla_put_u8(struct nlmsg *msg, int type, uint8_t data)
+{
+	return nla_put(msg, type, &data, sizeof(data));
+}
+
+static inline int nla_put_u16(struct nlmsg *msg, int type, uint16_t data)
+{
+	return nla_put(msg, type, &data, sizeof(data));
+}
+
+static inline int nla_put_u32(struct nlmsg *msg, int type, uint32_t data)
+{
+	return nla_put(msg, type, &data, sizeof(data));
+}
+
+static inline int nla_put_s32(struct nlmsg *msg, int type, int32_t data)
+{
+	return nla_put(msg, type, &data, sizeof(data));
+}
+
+static inline int nla_put_str(struct nlmsg *msg, int type, const char *str)
+{
+	return nla_put(msg, type, str, strlen(str) + 1);
+}
 
 static inline unsigned int nla_len(const struct nlattr *nla)
 {
@@ -84,14 +120,13 @@ static inline const char *nla_read_str(const struct nlattr *nla)
 /* rtnetlink */
 
 int rtnl_open(struct nl_handle *hnd);
-int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest);
+struct nlmsg *rtnlmsg_new(int type, int family, int flags, int size);
+int rtnl_ifi_dump(struct nl_handle *hnd, int type, int family, struct nlmsg **dest);
 
 /* genetlink */
 
 int genl_open(struct nl_handle *hnd);
-int genl_request(struct nl_handle *hnd,
-		 int type, int cmd, void *payload, int payload_len,
-		 struct nlmsg_entry **dest);
+struct nlmsg *genlmsg_new(int type, int cmd, int flags);
 unsigned int genl_family_id(struct nl_handle *hnd, const char *name);
 
 #endif
