@@ -35,6 +35,7 @@ struct nlmsg_entry {
 
 /* all netlink families */
 
+int nl_open(struct nl_handle *hnd, int family);
 void nl_close(struct nl_handle *hnd);
 int nl_exchange(struct nl_handle *hnd,
 		struct nlmsghdr *src, struct nlmsg_entry **dest);

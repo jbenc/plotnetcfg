@@ -27,7 +27,7 @@
 #include "list.h"
 #include "utils.h"
 
-static int nl_open(struct nl_handle *hnd, int family)
+int nl_open(struct nl_handle *hnd, int family)
 {
 	int bufsize;
 	int err;
