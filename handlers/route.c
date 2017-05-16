@@ -43,26 +43,18 @@ void handler_route_register(void)
 
 static int route_parse_metrics(struct list *metrics, struct nlattr *mxrta)
 {
-	struct nlattr **tb;
 	struct rtmetric *rtm;
-	int i;
 
-	tb = nla_nested_attrs(mxrta, RTAX_MAX);
-	if (!tb)
-		return ENOMEM;
-
-	for (i = 1; i <= RTAX_MAX; i++) {
-		if (!tb[i] || i == RTAX_CC_ALGO)
+	for_each_nla_nested(a, mxrta) {
+		if (a->nla_type >= RTAX_CC_ALGO)
 			continue;
 
 		rtm = calloc(1, sizeof(struct rtmetric));
-		if (!rtm) {
-			free(tb);
+		if (!rtm)
 			return ENOMEM;
-		}
 
-		rtm->type = i;
-		rtm->value = nla_read_u32(tb[i]);
+		rtm->type = a->nla_type;
+		rtm->value = nla_read_u32(a);
 		list_append(metrics, node(rtm));
 	}
 

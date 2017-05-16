@@ -422,7 +422,6 @@ struct nlmsg *genlmsg_new(int type, int cmd, int flags)
 unsigned int genl_family_id(struct nl_handle *hnd, const char *name)
 {
 	struct nlmsg *req, *resp;
-	struct nlattr **tb;
 	int res = 0;
 
 	req = genlmsg_new(GENL_ID_CTRL, CTRL_CMD_GETFAMILY, 0);
@@ -434,12 +433,12 @@ unsigned int genl_family_id(struct nl_handle *hnd, const char *name)
 		goto out_req;
 	if (!nlmsg_get(resp, sizeof(struct genlmsghdr)))
 		goto out_resp;
-	tb = nlmsg_attrs(resp, CTRL_ATTR_MAX);
-	if (!tb)
-		goto out_resp;
-	if (tb[CTRL_ATTR_FAMILY_ID])
-		res = nla_read_u16(tb[CTRL_ATTR_FAMILY_ID]);
-	free(tb);
+	for_each_nla(a, resp) {
+		if (a->nla_type == CTRL_ATTR_FAMILY_ID) {
+			res = nla_read_u16(a);
+			break;
+		}
+	}
 
 out_resp:
 	nlmsg_free(resp);

@@ -277,7 +277,6 @@ static int netns_add_proc_list(struct list *netns_list)
 static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 {
 	struct nlmsg *req, *resp;
-	struct nlattr **tb;
 	int res = -1;
 
 	req = rtnlmsg_new(RTM_GETNSID, AF_UNSPEC, 0, sizeof(struct rtgenmsg));
@@ -289,12 +288,12 @@ static int netns_get_id(struct nl_handle *hnd, struct netns_entry *entry)
 		goto out_req;
 	if (!nlmsg_get(resp, sizeof(struct rtgenmsg)))
 		goto out_resp;
-	tb = nlmsg_attrs(resp, NETNSA_MAX);
-	if (!tb)
-		goto out_resp;
-	if (tb[NETNSA_NSID])
-		res = nla_read_s32(tb[NETNSA_NSID]);
-	free(tb);
+	for_each_nla(a, resp) {
+		if (a->nla_type == NETNSA_NSID) {
+			res = nla_read_s32(a);
+			break;
+		}
+	}
 
 out_resp:
 	nlmsg_free(resp);
