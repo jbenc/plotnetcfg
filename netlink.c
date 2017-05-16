@@ -196,6 +196,34 @@ static void nlmsg_reset_start(struct nlmsg *msg)
 	msg->start = NLMSG_ALIGN(sizeof(struct nlmsghdr));
 }
 
+struct nlattr **nlmsg_attrs(struct nlmsg *msg, int max)
+{
+	struct nlattr **tb;
+
+	tb = calloc(max + 1, sizeof(struct nlattr *));
+	if (!tb)
+		return NULL;
+	for_each_nla(a, msg) {
+		if (a->nla_type <= max)
+			tb[a->nla_type] = a;
+	}
+	return tb;
+}
+
+struct nlattr **nla_nested_attrs(struct nlattr *nla, int max)
+{
+	struct nlattr **tb;
+
+	tb = calloc(max + 1, sizeof(struct nlattr *));
+	if (!tb)
+		return NULL;
+	for_each_nla_nested(a, nla) {
+		if (a->nla_type <= max)
+			tb[a->nla_type] = a;
+	}
+	return tb;
+}
+
 int nla_put(struct nlmsg *msg, int type, const void *data, int len)
 {
 	struct nlattr a = { .nla_len = len + sizeof(struct nlattr),
@@ -341,40 +369,6 @@ int nl_exchange(struct nl_handle *hnd, struct nlmsg *src, struct nlmsg **dest)
 int rtnl_open(struct nl_handle *hnd)
 {
 	return nl_open(hnd, NETLINK_ROUTE);
-}
-
-struct nlattr **nlmsg_attrs(struct nlmsg *msg, int max)
-{
-	struct nlattr **tb;
-	struct nlattr *nla = msg->buf + msg->start;
-	int len = msg->len - msg->start;
-
-	tb = calloc(max + 1, sizeof(struct nlattr *));
-	if (!tb)
-		return NULL;
-	while (RTA_OK((struct rtattr *)nla, len)) {
-		if (nla->nla_type <= max)
-			tb[nla->nla_type] = nla;
-		nla = (struct nlattr *)RTA_NEXT((struct rtattr *)nla, len);
-	}
-	return tb;
-}
-
-struct nlattr **nla_nested_attrs(struct nlattr *nla, int max)
-{
-	struct nlattr **tb;
-	int len = nla_len(nla);
-
-	nla = (struct nlattr *)nla_read(nla);
-	tb = calloc(max + 1, sizeof(struct nlattr *));
-	if (!tb)
-		return NULL;
-	while (RTA_OK((struct rtattr *)nla, len)) {
-		if (nla->nla_type <= max)
-			tb[nla->nla_type] = nla;
-		nla = (struct nlattr *)RTA_NEXT((struct rtattr *)nla, len);
-	}
-	return tb;
 }
 
 struct nlmsg *rtnlmsg_new(int type, int family, int flags, int size)

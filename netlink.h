@@ -117,6 +117,23 @@ static inline const char *nla_read_str(const struct nlattr *nla)
 	return (const char *)(nla + 1);
 }
 
+#define __nla_buf_remaining(iter, buf, len)				\
+	((int)(len) - ((void *)(iter) - (void *)(buf)))
+
+#define for_each_nla_buf(iter, buf, len)				\
+	for (struct nlattr *iter = (struct nlattr *)(buf);		\
+	     __nla_buf_remaining(iter, buf, len) >=			\
+				(int)sizeof(struct nlattr) &&		\
+	     iter->nla_len >= sizeof(struct nlattr) &&			\
+	     iter->nla_len <= __nla_buf_remaining(iter, buf, len);	\
+	     iter = (void *)iter + NLMSG_ALIGN(iter->nla_len))
+
+#define for_each_nla(iter, msg)	\
+	for_each_nla_buf(iter, (msg)->buf + (msg)->start, (msg)->len - (msg)->start)
+
+#define for_each_nla_nested(iter, nla)	\
+	for_each_nla_buf(iter, nla_read(nla), nla_len(nla))
+
 /* rtnetlink */
 
 int rtnl_open(struct nl_handle *hnd);
