@@ -35,7 +35,7 @@ struct mac_addr {
 	char *formatted;
 };
 
-int addr_init(struct addr *addr, int ai_family, int prefixlen, void *raw);
+int addr_init(struct addr *addr, int ai_family, int prefixlen, const void *raw);
 int addr_init_netlink(struct addr *dest, const struct ifaddrmsg *ifa,
 		      const struct rtattr *rta);
 

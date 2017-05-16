@@ -22,7 +22,7 @@
 #include <string.h>
 #include <sys/socket.h>
 
-int addr_init(struct addr *dest, int family, int prefixlen, void *raw)
+int addr_init(struct addr *dest, int family, int prefixlen, const void *raw)
 {
 	char buf[64];
 	unsigned int len = family == AF_INET ? 4 : 16;
