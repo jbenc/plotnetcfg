@@ -54,7 +54,7 @@ static inline int addr_max_prefix_len(int ai_family)
 void addr_destruct(struct addr *addr);
 
 int mac_addr_init(struct mac_addr *addr);
-int mac_addr_fill_netlink(struct mac_addr *addr, const unsigned char *data, int len);
+int mac_addr_fill_netlink(struct mac_addr *addr, const struct rtattr *rta);
 
 void mac_addr_destruct(struct mac_addr *addr);
 #endif

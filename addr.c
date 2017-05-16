@@ -85,8 +85,10 @@ int mac_addr_init(struct mac_addr *addr)
 	return 0;
 }
 
-int mac_addr_fill_netlink(struct mac_addr *addr, const unsigned char *data, int len)
+int mac_addr_fill_netlink(struct mac_addr *addr, const struct rtattr *rta)
 {
+	const unsigned char *data = RTA_DATA(rta);
+	int len = RTA_PAYLOAD(rta);
 	int i;
 
 	addr->len = len;
