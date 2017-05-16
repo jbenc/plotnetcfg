@@ -47,8 +47,7 @@ static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
 	rtnl_parse_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
-	if (!vlanattr[IFLA_VLAN_ID] ||
-	    RTA_PAYLOAD(vlanattr[IFLA_VLAN_ID]) < sizeof(__u16))
+	if (!vlanattr[IFLA_VLAN_ID])
 		return ENOENT;
 	priv->tag = NLA_GET_U16(vlanattr[IFLA_VLAN_ID]);
 	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0)
