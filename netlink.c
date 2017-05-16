@@ -324,5 +324,4 @@ unsigned int genl_family_id(struct nl_handle *hnd, const char *name)
 
 	nlmsg_free(dest);
 	return res;
-
 }
