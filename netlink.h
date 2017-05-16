@@ -17,11 +17,10 @@
 #define _NETLINK_H
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-
-struct rtattr;
 
 struct nl_handle {
 	int fd;
@@ -44,18 +43,47 @@ void nlmsg_free(struct nlmsg_entry *entry);
 int nla_add_str(void *orig, int orig_len, int nla_type, const char *str,
 		void **dest);
 
-#define NLA_GET(type, rta) (*(type *) RTA_DATA(rta))
-#define NLA_GET_U8(rta)  NLA_GET( uint8_t, rta)
-#define NLA_GET_U16(rta) NLA_GET(uint16_t, rta)
-#define NLA_GET_U32(rta) NLA_GET(uint32_t, rta)
-#define NLA_GET_S32(rta) NLA_GET( int32_t, rta)
+static inline unsigned int nla_len(const struct nlattr *nla)
+{
+	return nla->nla_len - sizeof(struct nlattr);
+}
+
+static inline const void *nla_read(const struct nlattr *nla)
+{
+	return nla + 1;
+}
+
+static inline uint8_t nla_read_u8(const struct nlattr *nla)
+{
+	return *(uint8_t *)(nla + 1);
+}
+
+static inline uint16_t nla_read_u16(const struct nlattr *nla)
+{
+	return *(uint16_t *)(nla + 1);
+}
+
+static inline uint32_t nla_read_u32(const struct nlattr *nla)
+{
+	return *(uint32_t *)(nla + 1);
+}
+
+static inline int32_t nla_read_s32(const struct nlattr *nla)
+{
+	return *(int32_t *)(nla + 1);
+}
+
+static inline const char *nla_read_str(const struct nlattr *nla)
+{
+	return (const char *)(nla + 1);
+}
 
 /* rtnetlink */
 
 int rtnl_open(struct nl_handle *hnd);
 int rtnl_dump(struct nl_handle *hnd, int family, int type, struct nlmsg_entry **dest);
-void rtnl_parse(struct rtattr *tb[], int max, struct rtattr *rta, int len);
-void rtnl_parse_nested(struct rtattr *tb[], int max, struct rtattr *rta);
+void nla_parse(struct nlattr *tb[], int max, struct nlattr *nla, int len);
+void nla_parse_nested(struct nlattr *tb[], int max, struct nlattr *nla);
 
 /* genetlink */
 

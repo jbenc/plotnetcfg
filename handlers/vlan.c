@@ -26,7 +26,7 @@ struct vlan_private {
 	unsigned int tag;
 };
 
-static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
+static int vlan_netlink(struct if_entry *entry, struct nlattr **linkinfo);
 
 static struct if_handler h_vlan = {
 	.driver = "802.1Q VLAN Support",
@@ -39,17 +39,17 @@ void handler_vlan_register(void)
 	if_handler_register(&h_vlan);
 }
 
-static int vlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
+static int vlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct vlan_private *priv = entry->handler_private;
-	struct rtattr *vlanattr[IFLA_VLAN_MAX + 1];
+	struct nlattr *vlanattr[IFLA_VLAN_MAX + 1];
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
-	rtnl_parse_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
+	nla_parse_nested(vlanattr, IFLA_VLAN_MAX, linkinfo[IFLA_INFO_DATA]);
 	if (!vlanattr[IFLA_VLAN_ID])
 		return ENOENT;
-	priv->tag = NLA_GET_U16(vlanattr[IFLA_VLAN_ID]);
+	priv->tag = nla_read_u16(vlanattr[IFLA_VLAN_ID]);
 	if (asprintf(&entry->edge_label, "tag %d", priv->tag) < 0)
 		return ENOMEM;
 	return 0;

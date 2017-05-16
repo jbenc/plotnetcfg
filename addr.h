@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 
 struct ifaddrmsg;
-struct rtattr;
+struct nlattr;
 
 struct addr {
 	int family;
@@ -37,7 +37,7 @@ struct mac_addr {
 
 int addr_init(struct addr *addr, int ai_family, int prefixlen, const void *raw);
 int addr_init_netlink(struct addr *dest, const struct ifaddrmsg *ifa,
-		      const struct rtattr *rta);
+		      const struct nlattr *nla);
 
 /* dest must point to at least 16 bytes long buffer */
 int addr_parse_raw(void *dest, const char *str);
@@ -54,7 +54,7 @@ static inline int addr_max_prefix_len(int ai_family)
 void addr_destruct(struct addr *addr);
 
 int mac_addr_init(struct mac_addr *addr);
-int mac_addr_fill_netlink(struct mac_addr *addr, const struct rtattr *rta);
+int mac_addr_fill_netlink(struct mac_addr *addr, const struct nlattr *nla);
 
 void mac_addr_destruct(struct mac_addr *addr);
 #endif

@@ -45,7 +45,7 @@ struct bond_private {
 	char *active_slave_name;
 };
 
-static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo);
+static int bond_netlink(struct if_entry *entry, struct nlattr **linkinfo);
 static int bond_scan(struct if_entry *entry);
 static int bond_post(struct if_entry *entry, struct list *netns_list);
 static void bond_cleanup(struct if_entry *entry);
@@ -64,23 +64,23 @@ void handler_bond_register(void)
 	if_handler_register(&h_bond);
 }
 
-static int bond_netlink(struct if_entry *entry, struct rtattr **linkinfo)
+static int bond_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct bond_private *priv = entry->handler_private;
-	struct rtattr *bondinfo[IFLA_BOND_MAX + 1];
+	struct nlattr *bondinfo[IFLA_BOND_MAX + 1];
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
-	rtnl_parse_nested(bondinfo, IFLA_BOND_MAX, linkinfo[IFLA_INFO_DATA]);
+	nla_parse_nested(bondinfo, IFLA_BOND_MAX, linkinfo[IFLA_INFO_DATA]);
 
 	if (bondinfo[IFLA_BOND_MODE]) {
-		priv->mode = *(uint8_t *)RTA_DATA(bondinfo[IFLA_BOND_MODE]) + 1;
+		priv->mode = nla_read_u8(bondinfo[IFLA_BOND_MODE]) + 1;
 		if (priv->mode > ARRAY_SIZE(bond_mode_name))
 			priv->mode = 0;
 	}
 
 	if (bondinfo[IFLA_BOND_ACTIVE_SLAVE]) {
-		priv->active_slave_index = NLA_GET_U32(bondinfo[IFLA_BOND_ACTIVE_SLAVE]);
+		priv->active_slave_index = nla_read_u32(bondinfo[IFLA_BOND_ACTIVE_SLAVE]);
 	}
 
 	return 0;

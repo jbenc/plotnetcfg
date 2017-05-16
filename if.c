@@ -16,7 +16,6 @@
 #include "if.h"
 #include <arpa/inet.h>
 #include <errno.h>
-#include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -37,8 +36,8 @@
 static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 {
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
-	struct rtattr *tb[IFLA_MAX + 1];
-	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
+	struct nlattr *tb[IFLA_MAX + 1];
+	struct nlattr *linkinfo[IFLA_INFO_MAX + 1];
 	int len = n->nlmsg_len;
 	int err;
 
@@ -47,11 +46,11 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 	if (len < 0)
 		return ENOENT;
-	rtnl_parse(tb, IFLA_MAX, IFLA_RTA(ifi), len);
+	nla_parse(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 	if (tb[IFLA_IFNAME] == NULL)
 		return ENOENT;
 	dest->if_index = ifi->ifi_index;
-	dest->if_name = strdup(RTA_DATA(tb[IFLA_IFNAME]));
+	dest->if_name = strdup(nla_read_str(tb[IFLA_IFNAME]));
 	if (!dest->if_name)
 		return ENOMEM;
 	if (ifi->ifi_flags & IFF_UP) {
@@ -60,16 +59,16 @@ static int fill_if_link(struct if_entry *dest, struct nlmsghdr *n)
 			dest->flags |= IF_HAS_LINK;
 	}
 	if (tb[IFLA_MASTER])
-		dest->master_index = NLA_GET_U32(tb[IFLA_MASTER]);
+		dest->master_index = nla_read_u32(tb[IFLA_MASTER]);
 	if (tb[IFLA_LINK]) {
-		dest->link_index = NLA_GET_U32(tb[IFLA_LINK]);
+		dest->link_index = nla_read_u32(tb[IFLA_LINK]);
 		if (tb[IFLA_LINK_NETNSID])
-			dest->link_netnsid = NLA_GET_S32(tb[IFLA_LINK_NETNSID]);
+			dest->link_netnsid = nla_read_s32(tb[IFLA_LINK_NETNSID]);
 	}
 	if (tb[IFLA_MTU])
-		dest->mtu = NLA_GET_U32(tb[IFLA_MTU]);
+		dest->mtu = nla_read_u32(tb[IFLA_MTU]);
 	if (tb[IFLA_LINKINFO])
-		rtnl_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
+		nla_parse_nested(linkinfo, IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 
 	if (tb[IFLA_ADDRESS]) {
 		err = mac_addr_fill_netlink(&dest->mac_addr, tb[IFLA_ADDRESS]);
@@ -116,7 +115,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 	struct if_addr *entry;
 	struct nlmsghdr *n;
 	struct ifaddrmsg *ifa;
-	struct rtattr *rta_tb[IFA_MAX + 1];
+	struct nlattr *rta_tb[IFA_MAX + 1];
 	int len, err;
 
 	for (; ainfo; ainfo = ainfo->next) {
@@ -133,7 +132,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 		    ifa->ifa_family != AF_INET6)
 			/* only IP addresses supported (at least for now) */
 			continue;
-		rtnl_parse(rta_tb, IFA_MAX, IFA_RTA(ifa), len);
+		nla_parse(rta_tb, IFA_MAX, IFA_RTA(ifa), len);
 		if (!rta_tb[IFA_LOCAL] && !rta_tb[IFA_ADDRESS])
 			/* don't care about broadcast and anycast adresses */
 			continue;
@@ -149,7 +148,7 @@ static int fill_if_addr(struct if_entry *dest, struct nlmsg_entry *ainfo)
 		if ((err = addr_init_netlink(&entry->addr, ifa, rta_tb[IFA_LOCAL])))
 			return err;
 		if (rta_tb[IFA_ADDRESS] &&
-		    memcmp(RTA_DATA(rta_tb[IFA_ADDRESS]), RTA_DATA(rta_tb[IFA_LOCAL]),
+		    memcmp(nla_read(rta_tb[IFA_ADDRESS]), nla_read(rta_tb[IFA_LOCAL]),
 			   ifa->ifa_family == AF_INET ? 4 : 16)) {
 			if ((err = addr_init_netlink(&entry->peer, ifa, rta_tb[IFA_ADDRESS])))
 				return err;

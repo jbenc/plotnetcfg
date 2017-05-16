@@ -71,7 +71,7 @@ int if_handler_init(struct if_entry *entry)
 	return 0;
 }
 
-int if_handler_netlink(struct if_entry *entry, struct rtattr **linkinfo)
+int if_handler_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct if_handler *h;
 	int err;

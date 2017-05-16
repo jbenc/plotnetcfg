@@ -36,7 +36,7 @@ struct vxlan_priv {
 	int flags;
 };
 
-static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo);
+static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo);
 static int vxlan_post(struct if_entry *entry, struct list *netns_list);
 
 static struct if_handler h_vxlan = {
@@ -53,18 +53,18 @@ void handler_vxlan_register(void)
 	if_handler_register(&h_vxlan);
 }
 
-static int vxlan_fill_addr(struct addr **addr, int ai_family, struct rtattr *rtattr)
+static int vxlan_fill_addr(struct addr **addr, int ai_family, struct nlattr *attr)
 {
 	int err;
 
-	if (!rtattr || *addr)
+	if (!attr || *addr)
 		return 0;
 
 	*addr = calloc(1, sizeof(struct addr));
 	if (!*addr)
 		return ENOMEM;
 
-	if ((err = addr_init(*addr, ai_family, addr_max_prefix_len(ai_family), RTA_DATA(rtattr)))) {
+	if ((err = addr_init(*addr, ai_family, addr_max_prefix_len(ai_family), nla_read(attr)))) {
 		free(*addr);
 		*addr = NULL;
 		return err;
@@ -73,9 +73,9 @@ static int vxlan_fill_addr(struct addr **addr, int ai_family, struct rtattr *rta
 	return 0;
 }
 
-static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
+static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
-	struct rtattr *vxlaninfo[IFLA_VXLAN_MAX + 1];
+	struct nlattr *vxlaninfo[IFLA_VXLAN_MAX + 1];
 	uint16_t port;
 	struct vxlan_priv *priv;
 	int err;
@@ -91,19 +91,19 @@ static int vxlan_netlink(struct if_entry *entry, struct rtattr **linkinfo)
 		err = ENOENT;
 		goto err_priv;
 	}
-	rtnl_parse_nested(vxlaninfo, IFLA_VXLAN_MAX, linkinfo[IFLA_INFO_DATA]);
+	nla_parse_nested(vxlaninfo, IFLA_VXLAN_MAX, linkinfo[IFLA_INFO_DATA]);
 
 	if (vxlaninfo[IFLA_VXLAN_ID])
-		if_add_config(entry, "VNI", "%u", NLA_GET_U32(vxlaninfo[IFLA_VXLAN_ID]));
+		if_add_config(entry, "VNI", "%u", nla_read_u32(vxlaninfo[IFLA_VXLAN_ID]));
 
 	if (vxlaninfo[IFLA_VXLAN_PORT]) {
-		port = NLA_GET_U16(vxlaninfo[IFLA_VXLAN_PORT]);
+		port = nla_read_u16(vxlaninfo[IFLA_VXLAN_PORT]);
 		if (port != VXLAN_DEFAULT_PORT)
 			if_add_config(entry, "port", "%u", port);
 	}
 
 	if (vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) {
-		priv->flags |= NLA_GET_U8(vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) ? VXLAN_COLLECT_METADATA : 0;
+		priv->flags |= nla_read_u8(vxlaninfo[IFLA_VXLAN_COLLECT_METADATA]) ? VXLAN_COLLECT_METADATA : 0;
 	}
 
 	if (priv->flags & VXLAN_COLLECT_METADATA) {

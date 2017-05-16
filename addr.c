@@ -16,11 +16,11 @@
 
 #include "addr.h"
 #include <errno.h>
-#include <linux/rtnetlink.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include "netlink.h"
 
 int addr_init(struct addr *dest, int family, int prefixlen, const void *raw)
 {
@@ -52,9 +52,9 @@ err:
 }
 
 int addr_init_netlink(struct addr *dest, const struct ifaddrmsg *ifa,
-		      const struct rtattr *rta)
+		      const struct nlattr *nla)
 {
-	return addr_init(dest, ifa->ifa_family, ifa->ifa_prefixlen, RTA_DATA(rta));
+	return addr_init(dest, ifa->ifa_family, ifa->ifa_prefixlen, nla_read(nla));
 }
 
 int addr_parse_raw(void *dest, const char *src)
@@ -85,10 +85,10 @@ int mac_addr_init(struct mac_addr *addr)
 	return 0;
 }
 
-int mac_addr_fill_netlink(struct mac_addr *addr, const struct rtattr *rta)
+int mac_addr_fill_netlink(struct mac_addr *addr, const struct nlattr *nla)
 {
-	const unsigned char *data = RTA_DATA(rta);
-	int len = RTA_PAYLOAD(rta);
+	const unsigned char *data = nla_read(nla);
+	int len = nla_len(nla);
 	int i;
 
 	addr->len = len;

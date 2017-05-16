@@ -41,13 +41,13 @@ void handler_route_register(void)
 	netns_handler_register(&h_route);
 }
 
-static int route_parse_metrics(struct list *metrics, struct rtattr *mxrta)
+static int route_parse_metrics(struct list *metrics, struct nlattr *mxrta)
 {
-	struct rtattr *tb [RTAX_MAX + 1];
+	struct nlattr *tb [RTAX_MAX + 1];
 	struct rtmetric *rtm;
 	int i;
 
-	rtnl_parse(tb, RTAX_MAX, RTA_DATA(mxrta), RTA_PAYLOAD(mxrta));
+	nla_parse_nested(tb, RTAX_MAX, mxrta);
 
 	for (i = 1; i <= RTAX_MAX; i++) {
 		if (!tb[i] || i == RTAX_CC_ALGO)
@@ -58,7 +58,7 @@ static int route_parse_metrics(struct list *metrics, struct rtattr *mxrta)
 			return ENOMEM;
 
 		rtm->type = i;
-		rtm->value = NLA_GET_U32(tb[i]);
+		rtm->value = nla_read_u32(tb[i]);
 		list_append(metrics, node(rtm));
 	}
 
@@ -68,7 +68,7 @@ static int route_parse_metrics(struct list *metrics, struct rtattr *mxrta)
 int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 {
 	struct rtmsg *rtmsg = NLMSG_DATA(n);
-	struct rtattr *tb[RTA_MAX + 1];
+	struct nlattr *tb[RTA_MAX + 1];
 	struct route *r;
 	int len = n->nlmsg_len;
 	int err;
@@ -92,32 +92,32 @@ int route_create_netlink(struct route **rte, struct nlmsghdr *n)
 	r->tos = rtmsg->rtm_tos;
 	r->type = rtmsg->rtm_type;
 
-	rtnl_parse(tb, RTA_MAX, RTM_RTA(rtmsg), len);
+	nla_parse(tb, RTA_MAX, RTM_RTA(rtmsg), len);
 
 	if (tb[RTA_TABLE])
-		r->table_id = NLA_GET_U32(tb[RTA_TABLE]);
+		r->table_id = nla_read_u32(tb[RTA_TABLE]);
 	else
 		r->table_id = rtmsg->rtm_table;
 
 	if (tb[RTA_SRC])
 		addr_init(&r->src, r->family, rtmsg->rtm_src_len,
-			  RTA_DATA(tb[RTA_SRC]));
+			  nla_read(tb[RTA_SRC]));
 	if (tb[RTA_DST])
 		addr_init(&r->dst, r->family, rtmsg->rtm_dst_len,
-			  RTA_DATA(tb[RTA_DST]));
+			  nla_read(tb[RTA_DST]));
 	if (tb[RTA_GATEWAY])
 		addr_init(&r->gw, r->family, -1,
-			  RTA_DATA(tb[RTA_GATEWAY]));
+			  nla_read(tb[RTA_GATEWAY]));
 	if (tb[RTA_PREFSRC])
 		addr_init(&r->prefsrc, r->family, -1,
-			  RTA_DATA(tb[RTA_PREFSRC]));
+			  nla_read(tb[RTA_PREFSRC]));
 
 	if (tb[RTA_OIF])
-		r->oifindex = NLA_GET_U32(tb[RTA_OIF]);
+		r->oifindex = nla_read_u32(tb[RTA_OIF]);
 	if (tb[RTA_IIF])
-		r->iifindex = NLA_GET_U32(tb[RTA_IIF]);
+		r->iifindex = nla_read_u32(tb[RTA_IIF]);
 	if (tb[RTA_PRIORITY])
-		r->priority = NLA_GET_U32(tb[RTA_PRIORITY]);
+		r->priority = nla_read_u32(tb[RTA_PRIORITY]);
 
 
 	list_init(&r->metrics);
