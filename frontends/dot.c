@@ -72,7 +72,7 @@ static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_ma
 		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {
 			output_addresses(f, &ptr->addr);
 			if ((ptr->flags & IF_LOOPBACK) == 0 && ptr->mac_addr.formatted)
-				fprintf(f, "\nmac %s", ptr->mac_addr.formatted);
+				fprintf(f, "\\nmac %s", ptr->mac_addr.formatted);
 		}
 		fprintf(f, "\"");
 
