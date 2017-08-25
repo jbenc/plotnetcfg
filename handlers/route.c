@@ -170,7 +170,7 @@ int route_scan(struct netns_entry *ns)
 		.rtm_protocol = RTPROT_UNSPEC,
 	};
 	struct rtable *tables [256];
-	struct route *r;
+	struct route *r = NULL;
 	int err, i;
 
 	memset(tables, 0, sizeof(tables));
