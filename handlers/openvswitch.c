@@ -109,11 +109,25 @@ static void destruct_if(struct ovs_if *iface)
 	free(iface->peer);
 }
 
+static int find_str_option(char **dest, json_t *jarr, const char *search_name)
+{
+	unsigned int i;
+
+	for (i = 0; i < json_array_size(jarr); i++) {
+		json_t *jkv = json_array_get(jarr, i);
+		const char *key = json_string_value(json_array_get(jkv, 0));
+		if (!strcmp(key, search_name)) {
+			*dest = strdup(json_string_value(json_array_get(jkv, 1)));
+			return 0;
+		}
+	}
+	return 1;
+}
+
 static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 {
 	struct ovs_if *iface;
 	json_t *jif, *jarr;
-	unsigned int i;
 
 	if (!is_uuid(uuid))
 		return NULL;
@@ -127,31 +141,13 @@ static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 	iface->name = strdup(json_string_value(json_object_get(jif, "name")));
 	iface->type = strdup(json_string_value(json_object_get(jif, "type")));
 	jarr = json_object_get(jif, "options");
-	if (!strcmp(iface->type, "vxlan") && is_map(jarr)) {
+	if (is_map(jarr)) {
 		jarr = json_array_get(jarr, 1);
-		for (i = 0; i < json_array_size(jarr); i++) {
-			json_t *jkv;
-			const char *key, *val;
-
-			jkv = json_array_get(jarr, i);
-			key = json_string_value(json_array_get(jkv, 0));
-			val = json_string_value(json_array_get(jkv, 1));
-			if (!strcmp(key, "local_ip"))
-				iface->local_ip = strdup(val);
-			else if (!strcmp(key, "remote_ip"))
-				iface->remote_ip = strdup(val);
-		}
-	} else if (!strcmp(iface->type, "patch") && is_map(jarr)) {
-		jarr = json_array_get(jarr, 1);
-		for (i = 0; i < json_array_size(jarr); i++) {
-			json_t *jkv;
-			const char *key, *val;
-
-			jkv = json_array_get(jarr, i);
-			key = json_string_value(json_array_get(jkv, 0));
-			val = json_string_value(json_array_get(jkv, 1));
-			if (!strcmp(key, "peer"))
-				iface->peer = strdup(val);
+		if (!strcmp(iface->type, "vxlan")) {
+			find_str_option(&iface->local_ip, jarr, "local_ip");
+			find_str_option(&iface->remote_ip, jarr, "remote_ip");
+		} else if (!strcmp(iface->type, "patch")) {
+			find_str_option(&iface->peer, jarr, "peer");
 		}
 	}
 	return iface;
