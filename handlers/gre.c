@@ -77,12 +77,12 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 
 	if (greinfo[IFLA_GRE_IKEY]) {
 		if ((key = nla_read_u32(greinfo[IFLA_GRE_IKEY])))
-			if_add_config(entry, "ikey", "%u", key);
+			if_add_config(entry, "ikey", "%u", ntohl(key));
 	}
 
 	if (greinfo[IFLA_GRE_OKEY])
 		if ((key = nla_read_u32(greinfo[IFLA_GRE_OKEY])))
-			if_add_config(entry, "okey", "%u", key);
+			if_add_config(entry, "okey", "%u", ntohl(key));
 
 	return 0;
 
