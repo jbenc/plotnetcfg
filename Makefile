@@ -2,7 +2,7 @@ ifeq ($(jansson),)
 libs=$(shell pkg-config --libs jansson)
 else
 libs=$(wildcard $(jansson)/src/.libs/libjansson.a $(jansson)/lib/libjansson.a)
-INCLUDE=-I$(jansson)/src
+INCLUDE=-I$(jansson)/include
 endif
 
 CFLAGS=-std=c99 -D_GNU_SOURCE -W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
