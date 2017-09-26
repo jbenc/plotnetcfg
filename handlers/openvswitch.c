@@ -52,6 +52,7 @@ struct ovs_if {
 	/* for tunnels: */
 	char *local_ip;
 	char *remote_ip;
+	char *key;
 	/* for patch port: */
 	char *peer;
 };
@@ -106,6 +107,7 @@ static void destruct_if(struct ovs_if *iface)
 	free(iface->type);
 	free(iface->local_ip);
 	free(iface->remote_ip);
+	free(iface->key);
 	free(iface->peer);
 }
 
@@ -153,6 +155,7 @@ static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 		if (iface_is_tunnel(iface)) {
 			find_str_option(&iface->local_ip, jarr, "local_ip");
 			find_str_option(&iface->remote_ip, jarr, "remote_ip");
+			find_str_option(&iface->key, jarr, "key");
 		} else if (!strcmp(iface->type, "patch")) {
 			find_str_option(&iface->peer, jarr, "peer");
 		}
@@ -546,6 +549,8 @@ static void label_iface(struct ovs_if *iface)
 		if_add_config(iface->link, "from", "%s", iface->local_ip);
 	if (iface->remote_ip)
 		if_add_config(iface->link, "to", "%s", iface->remote_ip);
+	if (iface->key)
+		if_add_config(iface->link, "key", "%s", iface->key);
 }
 
 static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
