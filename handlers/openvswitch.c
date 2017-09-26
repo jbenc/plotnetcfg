@@ -49,7 +49,7 @@ struct ovs_if {
 	struct if_entry *link;
 	char *name;
 	char *type;
-	/* for vxlan: */
+	/* for tunnels: */
 	char *local_ip;
 	char *remote_ip;
 	/* for patch port: */
@@ -124,6 +124,13 @@ static int find_str_option(char **dest, json_t *jarr, const char *search_name)
 	return 1;
 }
 
+static int iface_is_tunnel(const struct ovs_if *iface)
+{
+	return !strcmp(iface->type, "vxlan")
+		|| !strcmp(iface->type, "geneve")
+		|| !strcmp(iface->type, "gre");
+}
+
 static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 {
 	struct ovs_if *iface;
@@ -143,7 +150,7 @@ static struct ovs_if *parse_iface(json_t *jresult, json_t *uuid)
 	jarr = json_object_get(jif, "options");
 	if (is_map(jarr)) {
 		jarr = json_array_get(jarr, 1);
-		if (!strcmp(iface->type, "vxlan")) {
+		if (iface_is_tunnel(iface)) {
 			find_str_option(&iface->local_ip, jarr, "local_ip");
 			find_str_option(&iface->remote_ip, jarr, "remote_ip");
 		} else if (!strcmp(iface->type, "patch")) {
@@ -562,7 +569,7 @@ static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
 		if_add_config(link, "bond mode", "%s", port->bond_mode);
 }
 
-static void link_vxlan(struct ovs_if *iface)
+static void link_tunnel(struct ovs_if *iface)
 {
 	if (!iface->local_ip || !*iface->local_ip)
 		return;
@@ -651,8 +658,8 @@ static int link_ifaces(struct list *netns_list)
 				label_iface(iface);
 				if (port->iface_count == 1)
 					label_port_or_iface(port, iface->link);
-				if (!strcmp(iface->type, "vxlan"))
-					link_vxlan(iface);
+				if (iface_is_tunnel(iface))
+					link_tunnel(iface);
 				else if (!strcmp(iface->type, "patch")) {
 					if ((err = link_patch(iface, netns_list)))
 						return err;
