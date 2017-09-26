@@ -85,7 +85,7 @@ static int veth_post(struct if_entry *entry, struct list *netns_list)
 	if (match_ambiguous(match))
 		return if_add_warning(entry, "failed to find the veth peer reliably");
 	if (!match_found(match))
-		return if_add_warning(entry, "failed to find the veth perr");
+		return if_add_warning(entry, "failed to find the veth peer");
 	peer_set(entry, match_found(match));
 	return 0;
 }
