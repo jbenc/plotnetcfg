@@ -37,6 +37,9 @@ int master_set(struct if_entry *master, struct if_entry *master_of)
 
 int link_set(struct if_entry *link, struct if_entry *entry)
 {
+	if (!entry)
+		return 0;
+
 	if (entry->link != NULL)
 		node_remove(&entry->rev_link_node);
 	entry->link = link;
@@ -48,13 +51,17 @@ int link_set(struct if_entry *link, struct if_entry *entry)
 
 int peer_set(struct if_entry *first, struct if_entry *second)
 {
-	if (first->peer)
-		first->peer->peer = NULL;
-	if (second->peer)
-		second->peer->peer = NULL;
+	if (first) {
+		if (first->peer)
+			first->peer->peer = NULL;
+		first->peer = second;
+	}
 
-	first->peer = second;
-	second->peer = first;
+	if (second) {
+		if (second->peer)
+			second->peer->peer = NULL;
+		second->peer = first;
+	}
 	return 0;
 }
 
