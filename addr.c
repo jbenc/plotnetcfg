@@ -68,6 +68,14 @@ int addr_parse_raw(void *dest, const char *src)
 	return af;
 }
 
+int addr_is_zero(struct addr *addr)
+{
+	static const char zero [16];
+	unsigned int len = addr->family == AF_INET ? 4 : 16;
+
+	return !memcmp(zero, addr->raw, len);
+}
+
 void addr_destruct(struct addr *addr)
 {
 	if (addr->raw) {

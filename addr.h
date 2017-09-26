@@ -51,6 +51,7 @@ static inline int addr_max_prefix_len(int ai_family)
 	return 0;
 }
 
+int addr_is_zero(struct addr *addr);
 void addr_destruct(struct addr *addr);
 
 int mac_addr_init(struct mac_addr *addr);

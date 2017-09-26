@@ -45,7 +45,7 @@ void handler_gre_register(void)
 static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct nlattr **greinfo;
-	int err;
+	int err, key;
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
@@ -58,7 +58,8 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		struct addr addr;
 		if ((err = addr_init(&addr, AF_INET, -1, nla_read(greinfo[IFLA_GRE_LOCAL]))))
 			goto err_attrs;
-		if_add_config(entry, "local", "%s", addr.formatted);
+		if (!addr_is_zero(&addr))
+			if_add_config(entry, "local", "%s", addr.formatted);
 		addr_destruct(&addr);
 	}
 
@@ -66,18 +67,22 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		struct addr addr;
 		if ((err = addr_init(&addr, AF_INET, -1, nla_read(greinfo[IFLA_GRE_REMOTE]))))
 			goto err_attrs;
-		if_add_config(entry, "remote", "%s", addr.formatted);
+		if (!addr_is_zero(&addr))
+			if_add_config(entry, "remote", "%s", addr.formatted);
 		addr_destruct(&addr);
 	}
 
 	if (greinfo[IFLA_GRE_LINK])
 		entry->link_index = nla_read_u8(greinfo[IFLA_GRE_LINK]);
 
-	if (greinfo[IFLA_GRE_IKEY])
-		if_add_config(entry, "ikey", "%u", nla_read_u32(greinfo[IFLA_GRE_IKEY]));
+	if (greinfo[IFLA_GRE_IKEY]) {
+		if ((key = nla_read_u32(greinfo[IFLA_GRE_IKEY])))
+			if_add_config(entry, "ikey", "%u", key);
+	}
 
 	if (greinfo[IFLA_GRE_OKEY])
-		if_add_config(entry, "okey", "%u", nla_read_u32(greinfo[IFLA_GRE_OKEY]));
+		if ((key = nla_read_u32(greinfo[IFLA_GRE_OKEY])))
+			if_add_config(entry, "okey", "%u", key);
 
 	return 0;
 
