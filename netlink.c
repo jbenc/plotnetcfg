@@ -19,6 +19,7 @@
 #include <linux/genetlink.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,9 @@
 #include "utils.h"
 
 #define NLMSG_BASIC_SIZE	16384
+
+#define NL_TIMEOUT_MS		500
+#define NL_RETRY_COUNT		16
 
 int nl_open(struct nl_handle *hnd, int family)
 {
@@ -271,11 +275,23 @@ static int nl_recv(struct nl_handle *hnd, struct nlmsg **dest, int is_dump)
 	struct nlmsghdr *n;
 	struct nlmsg *ptr = NULL; /* GCC false positive */
 	struct nlmsg *entry;
+	struct pollfd pfd;
 
 	*dest = NULL;
+	pfd.fd = hnd->fd;
+	pfd.events = POLLIN;
 	while (1) {
 		iov.iov_base = buf;
 		iov.iov_len = sizeof(buf);
+		err = poll(&pfd, 1, NL_TIMEOUT_MS);
+		if (err < 0) {
+			err = errno;
+			goto err_out;
+		}
+		if (err == 0 || !(pfd.revents & POLLIN)) {
+			err = ETIME;
+			goto err_out;
+		}
 		len = recvmsg(hnd->fd, &msg, 0);
 		if (len < 0) {
 			err = errno;
@@ -342,7 +358,7 @@ int nl_exchange(struct nl_handle *hnd, struct nlmsg *src, struct nlmsg **dest)
 	};
 	int is_dump;
 	int err;
-	int retry = 16;
+	int retry = NL_RETRY_COUNT;
 
 	is_dump = !!(nlmsg_get_hdr(src)->nlmsg_flags & NLM_F_DUMP);
 	while (1) {
@@ -353,6 +369,8 @@ int nl_exchange(struct nl_handle *hnd, struct nlmsg *src, struct nlmsg **dest)
 		if (err)
 			return err;
 		err = nl_recv(hnd, dest, is_dump);
+		if (err == ETIME || err == EAGAIN || err == EINTR)
+			continue;
 		if (err)
 			return err;
 
