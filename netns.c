@@ -83,6 +83,8 @@ static struct netns_entry *netns_create()
 
 	list_init(&ns->ifaces);
 	list_init(&ns->warnings);
+	list_init(&ns->ids);
+
 	return ns;
 }
 
@@ -315,8 +317,6 @@ static void netns_get_all_ids(struct netns_entry *current, struct list *netns_li
 		return;
 	if (rtnl_open(&hnd) < 0)
 		return;
-
-	list_init(&current->ids);
 
 	list_for_each(entry, *netns_list) {
 		id = netns_get_id(&hnd, entry);
