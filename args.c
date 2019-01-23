@@ -78,13 +78,18 @@ int arg_parse(int argc, char **argv)
 		}
 		/* find the respective arg_option */
 		if (!gshort_index) {
-			opt = list_tail(options.list);
+			i = 0;
+			list_for_each(opt, options.list) {
+				if (i == glong_index)
+					break;
+				i++;
+			}
 		} else {
 			list_for_each(opt, options.list)
 				if (opt->short_name == gshort_index)
 					break;
-			assert(opt);
 		}
+		assert(opt);
 
 		if (optarg) {
 			switch (opt->type) {
