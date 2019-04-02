@@ -632,8 +632,9 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 		break;
 	case OVS_DP_TYPE_NETDEV:
 		if (!strcmp(iface->type, "internal")) {
-			if (strcmp(entry->driver, "tun"))
+			if (strcmp(entry->driver, "tun") || entry->sub_driver)
 				return 0;
+			entry->sub_driver = strdup("openvswitch");
 		} else {
 			/* The netdev datapath does not have kernel
 			 * interfaces for anything else than internal ports. */

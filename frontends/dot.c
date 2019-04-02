@@ -66,7 +66,7 @@ static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_ma
 	list_for_each(ptr, *list) {
 		fprintf(f, "\"%s\" [label=\"%s", ifid(ptr), ptr->if_name);
 		if (ptr->driver)
-			fprintf(f, " (%s)", ptr->driver);
+			fprintf(f, " (%s)", ifdrv(ptr));
 		output_label_properties(f, &ptr->properties, prop_mask);
 		output_mtu(f, ptr);
 		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {

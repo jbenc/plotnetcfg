@@ -110,7 +110,7 @@ static json_t *interfaces_to_array(struct list *list, struct output_entry *outpu
 		json_object_set_new(ifobj, "id", json_string(ifid(entry)));
 		json_object_set_new(ifobj, "namespace", json_string(nsid(entry->ns)));
 		json_object_set_new(ifobj, "name", json_string(entry->if_name));
-		json_object_set_new(ifobj, "driver", json_string(entry->driver ? entry->driver : ""));
+		json_object_set_new(ifobj, "driver", json_string(ifdrv(entry)));
 		json_object_set_new(ifobj, "info", label_properties_to_object(&entry->properties, output_entry->print_mask));
 		if (label_prop_match_mask(IF_PROP_CONFIG, output_entry->print_mask)) {
 			json_object_set_new(ifobj, "addresses", addresses_to_array(&entry->addr));

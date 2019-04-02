@@ -30,6 +30,7 @@ struct rtable;
 /* Returns static buffer. */
 char *ifstr(struct if_entry *entry);
 char *ifid(struct if_entry *entry);
+char *ifdrv(struct if_entry *entry);
 char *nsid(struct netns_entry *entry);
 char *rtid(struct rtable *rt);
 

@@ -40,6 +40,7 @@ struct if_entry {
 	int mtu;
 	char *if_name;
 	char *driver;
+	char *sub_driver;
 	struct list properties;
 	unsigned int master_index;
 	struct if_entry *master;

@@ -259,6 +259,7 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->if_name);
 	free(entry->edge_label);
 	free(entry->driver);
+	free(entry->sub_driver);
 	mac_addr_destruct(&entry->mac_addr);
 	label_free_property(&entry->properties);
 	list_free(&entry->addr, (destruct_f) if_addr_destruct);

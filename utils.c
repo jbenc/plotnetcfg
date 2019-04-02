@@ -49,6 +49,19 @@ char *ifid(struct if_entry *entry)
 	return buf;
 }
 
+char *ifdrv(struct if_entry *entry)
+{
+	static char buf[256];
+
+	if (!entry->driver)
+		return "";
+	if (!entry->sub_driver)
+		return entry->driver;
+
+	snprintf(buf, sizeof(buf), "%s/%s", entry->driver, entry->sub_driver);
+	return buf;
+}
+
 char *nsid(struct netns_entry *entry)
 {
 	static char buf[NETNS_MAX + 1];
