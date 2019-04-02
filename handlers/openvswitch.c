@@ -59,6 +59,8 @@ struct ovs_if {
 	char *key;
 	/* for patch port: */
 	char *peer;
+	/* for dpdk port: */
+	char *hw_dev;
 };
 
 struct ovs_port {
@@ -189,6 +191,9 @@ static int parse_iface(json_t *jresult, json_t *uuid, struct ovs_port *port, str
 				goto err_iface;
 		} else if (!strcmp(iface->type, "patch")) {
 			if ((err = search_str_option(&iface->peer, jarr, "peer")))
+				goto err_iface;
+		} else if (!strcmp(iface->type, "dpdk")) {
+			if ((err = search_str_option(&iface->hw_dev, jarr, "dpdk-devargs")))
 				goto err_iface;
 		}
 	}
@@ -722,6 +727,8 @@ static void label_iface(struct ovs_if *iface)
 		if_add_config(iface->link, "to", "%s", iface->remote_ip);
 	if (iface->key)
 		if_add_config(iface->link, "key", "%s", iface->key);
+	if (iface->hw_dev)
+		if_add_config(iface->link, "hw", "%s", iface->hw_dev);
 }
 
 static void label_port_or_iface(struct ovs_port *port, struct if_entry *link)
