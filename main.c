@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include <errno.h>
 #include <linux/capability.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,14 +89,24 @@ static struct arg_option options[] = {
 static int check_caps(void)
 {
 	struct __user_cap_header_struct caps_hdr;
-	struct __user_cap_data_struct caps;
+	struct __user_cap_data_struct caps[2];
+	int err;
 
-	caps_hdr.version = _LINUX_CAPABILITY_VERSION_1;
+	caps_hdr.version = _LINUX_CAPABILITY_VERSION_3;
 	caps_hdr.pid = 0;
-	if (syscall(__NR_capget, &caps_hdr, &caps) < 0)
+	err = syscall(__NR_capget, &caps_hdr, caps);
+	if (err == -EINVAL) {
+		caps_hdr.version = _LINUX_CAPABILITY_VERSION_1;
+		caps_hdr.pid = 0;
+		err = syscall(__NR_capget, &caps_hdr, caps);
+	}
+	if (err < 0)
 		return 0;
-	if (!(caps.effective & (1U << CAP_SYS_ADMIN)) ||
-	    !(caps.effective & (1U << CAP_NET_ADMIN)))
+	/* The capabilities we're interested in fall into the first 32 bits,
+	 * thus we can just check the first array member irrespective of
+	 * whether we used v3 or v1 of the syscall. */
+	if (!(caps[0].effective & (1U << CAP_SYS_ADMIN)) ||
+	    !(caps[0].effective & (1U << CAP_NET_ADMIN)))
 		return 0;
 	return 1;
 }
