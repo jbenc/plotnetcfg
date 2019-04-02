@@ -76,9 +76,15 @@ struct ovs_port {
 	char *bond_mode;
 };
 
+enum ovs_dp_type {
+	OVS_DP_TYPE_SYSTEM,
+	OVS_DP_TYPE_NETDEV,
+};
+
 struct ovs_bridge {
 	struct node n;
 	char *name;
+	enum ovs_dp_type dp_type;
 	struct list ports;
 	struct ovs_port *system;
 };
@@ -298,7 +304,7 @@ static int parse_bridge(struct ovs_bridge **dest, json_t *jresult,
 {
 	struct ovs_bridge *br;
 	json_t *jbridge, *jarr;
-	const char *name;
+	const char *name, *dp_type;
 	unsigned int i;
 	int err;
 
@@ -323,6 +329,10 @@ static int parse_bridge(struct ovs_bridge **dest, json_t *jresult,
 		return EINVAL;
 	}
 
+	dp_type = json_string_value(json_object_get(jbridge, "datapath_type"));
+	if (!dp_type || !*dp_type)
+		dp_type = "system";
+
 	if (!(br = calloc(1, sizeof(*br))))
 		return ENOMEM;
 	list_init(&br->ports);
@@ -330,6 +340,16 @@ static int parse_bridge(struct ovs_bridge **dest, json_t *jresult,
 	br->name = strdup(name);
 	if (!br->name)
 		goto err_br;
+
+	if (!strcmp(dp_type, "system"))
+		br->dp_type = OVS_DP_TYPE_SYSTEM;
+	else if (!strcmp(dp_type, "netdev"))
+		br->dp_type = OVS_DP_TYPE_NETDEV;
+	else {
+		label_add(warnings, OVS_WARN "unknown datapath type %s", dp_type);
+		err = EINVAL;
+		goto err_br;
+	}
 
 	jarr = json_object_get(jbridge, "ports");
 	if (is_set(jarr)) {
@@ -456,7 +476,7 @@ static char *construct_query(void)
 		return NULL;
 
 	if (add_table(po, "Open_vSwitch", "bridges", "ovs_version", NULL)
-	 || add_table(po, "Bridge", "name", "ports", NULL)
+	 || add_table(po, "Bridge", "name", "ports", "datapath_type", NULL)
 	 || add_table(po, "Port", "interfaces", "name", "tag", "trunks", "bond_mode", NULL)
 	 || add_table(po, "Interface", "name", "type", "options", "admin_state", "link_state", NULL))
 		goto err_po;
@@ -578,10 +598,11 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 {
 	struct ovs_if *iface = arg;
 	struct ovs_if *master = list_head(iface->port->bridge->system->ifaces);
+	enum ovs_dp_type dp_type = iface->port->bridge->dp_type;
 	int search_for_system = !master->link;
 	int weight;
 
-	if (!search_for_system &&
+	if (!search_for_system && dp_type == OVS_DP_TYPE_SYSTEM &&
 	    entry->master && strcmp(entry->master->if_name, "ovs-system"))
 		return 0;
 	/* Ignore ifindex reported by ovsdb, as it is guessed by the
@@ -592,18 +613,34 @@ static int link_iface_search(struct if_entry *entry, void *arg)
 	 */
 	if (strcmp(iface->name, entry->if_name))
 		return 0;
-	if (!strcmp(iface->type, "internal") &&
-	    strcmp(entry->driver, "openvswitch"))
-		return 0;
 
-	/* We've got a match. This still may not mean the interface is
-	 * actually connected in the kernel datapath. Newer kernels set
-	 * master (at least for netdev interface type) to ovs-system, which
-	 * we check above. For older kernels, we need to be more clever.
-	 */
-	if (!search_for_system && !entry->master &&
-	    !check_vport(master->link->ns, entry))
-		return 0;
+	switch (dp_type) {
+	case OVS_DP_TYPE_SYSTEM:
+		if (!strcmp(iface->type, "internal") &&
+		    strcmp(entry->driver, "openvswitch"))
+			return 0;
+
+		/* We've got a match. This still may not mean the interface is
+		 * actually connected in the kernel datapath. Newer kernels set
+		 * master (at least for netdev interface type) to ovs-system, which
+		 * we check above. For older kernels, we need to be more clever.
+		 */
+		if (!search_for_system && !entry->master &&
+		    !check_vport(master->link->ns, entry))
+			return 0;
+
+		break;
+	case OVS_DP_TYPE_NETDEV:
+		if (!strcmp(iface->type, "internal")) {
+			if (strcmp(entry->driver, "tun"))
+				return 0;
+		} else {
+			/* The netdev datapath does not have kernel
+			 * interfaces for anything else than internal ports. */
+			return 0;
+		}
+		break;
+	}
 
 	weight = 1;
 	if (!search_for_system) {
