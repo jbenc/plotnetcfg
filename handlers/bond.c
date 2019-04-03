@@ -77,7 +77,7 @@ static int bond_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 
 	if (bondinfo[IFLA_BOND_MODE]) {
 		priv->mode = nla_read_u8(bondinfo[IFLA_BOND_MODE]) + 1;
-		if (priv->mode > ARRAY_SIZE(bond_mode_name))
+		if (priv->mode >= ARRAY_SIZE(bond_mode_name))
 			priv->mode = 0;
 	}
 
@@ -135,7 +135,7 @@ static int bond_scan(struct if_entry *entry)
 				priv->mode = atoi(tmp + 1) + 1;
 			free(dest);
 		}
-		if (priv->mode > ARRAY_SIZE(bond_mode_name))
+		if (priv->mode >= ARRAY_SIZE(bond_mode_name))
 			priv->mode = 0;
 	}
 
