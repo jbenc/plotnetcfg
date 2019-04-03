@@ -33,6 +33,7 @@ struct if_entry {
 	struct node rev_master_node;	/* in if_entry->rev_master */
 	struct node rev_link_node;	/* in if_entry->rev_link   */
 
+	/* basic fields */
 	struct netns_entry *ns;
 	char *internal_ns;
 	unsigned int if_index;
@@ -42,8 +43,14 @@ struct if_entry {
 	char *driver;
 	char *sub_driver;
 	struct list properties;
+	struct mac_addr mac_addr;
+	struct list addr;
+
+	/* master relation */
 	unsigned int master_index;
 	struct if_entry *master;
+
+	/* peer and child relations */
 	struct if_entry *active_slave;
 	unsigned int link_index;
 	int link_netnsid;
@@ -51,17 +58,20 @@ struct if_entry {
 	unsigned int peer_index;
 	int peer_netnsid;
 	struct if_entry *peer;
-	struct list addr;
-	struct mac_addr mac_addr;
-	char *edge_label;
-	void *handler_private;
-	int warnings;
-	/* reverse fields needed by some frontends: */
-	struct list rev_master;
-	struct list rev_link;
+
+	/* IOV fields */
 	char *pci_path;
 	char *pci_physfn_path;
 	struct if_entry *physfn;
+
+	/* handler fields */
+	char *edge_label;
+	void *handler_private;
+	int warnings;
+
+	/* reverse fields needed by some frontends */
+	struct list rev_master;
+	struct list rev_link;
 };
 
 #define IF_LOOPBACK		1
