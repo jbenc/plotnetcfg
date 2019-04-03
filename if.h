@@ -28,6 +28,12 @@ struct if_addr {
 	struct addr peer;
 };
 
+struct if_xdp {
+	struct node n;
+	char mode[16];
+	unsigned int prog_id;
+};
+
 struct if_entry {
 	struct node n;			/* in netns->ifaces        */
 	struct node rev_master_node;	/* in if_entry->rev_master */
@@ -45,6 +51,7 @@ struct if_entry {
 	struct list properties;
 	struct mac_addr mac_addr;
 	struct list addr;
+	struct list xdp;
 
 	/* master relation */
 	unsigned int master_index;

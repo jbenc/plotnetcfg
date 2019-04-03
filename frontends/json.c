@@ -84,6 +84,21 @@ static json_t *addresses_to_array(struct list *addresses)
 	return arr;
 }
 
+static json_t *xdp_to_array(struct list *xdp_list)
+{
+	json_t *arr, *obj;
+	struct if_xdp *entry;
+
+	arr = json_array();
+	list_for_each(entry, *xdp_list) {
+		obj = json_object();
+		json_object_set_new(obj, "mode", json_string(entry->mode));
+		json_object_set_new(obj, "prog_id", json_integer(entry->prog_id));
+		json_array_append_new(arr, obj);
+	}
+	return arr;
+}
+
 static json_t *connection(struct if_entry *target, char *edge_label)
 {
 	json_t *obj, *arr;
@@ -131,6 +146,8 @@ static json_t *interfaces_to_array(struct list *list, struct output_entry *outpu
 			s = "up";
 		if (label_prop_match_mask(IF_PROP_STATE, output_entry->print_mask))
 			json_object_set_new(ifobj, "state", json_string(s));
+		if (!list_empty(entry->xdp))
+			json_object_set_new(ifobj, "xdp", xdp_to_array(&entry->xdp));
 		if (entry->warnings)
 			json_object_set_new(ifobj, "warning", json_true());
 

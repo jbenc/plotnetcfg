@@ -33,6 +33,66 @@
 
 #include "compat.h"
 
+static const char *xdp_mode_name[] = {
+	"",
+	"driver",
+	"generic",
+	"offloaded",
+};
+
+static int fill_if_xdp_prog(struct list *xdp_list, unsigned int mode,
+			    const struct nlattr *prog_id_nla)
+{
+	struct if_xdp *entry;
+	unsigned int prog_id = 0;
+
+	if (prog_id_nla)
+		prog_id = nla_read_u32(prog_id_nla);
+	if (!prog_id)
+		return 0;
+
+	entry = calloc(1, sizeof(struct if_xdp));
+	if (!entry)
+		return ENOMEM;
+	entry->prog_id = prog_id;
+	if (mode < ARRAY_SIZE(xdp_mode_name))
+		snprintf(entry->mode, sizeof(entry->mode), "%s", xdp_mode_name[mode]);
+	else
+		snprintf(entry->mode, sizeof(entry->mode), "[%u]", mode);
+	list_append(xdp_list, node(entry));
+	return 0;
+}
+
+static int fill_if_xdp(struct list *xdp_list, struct nlattr *xdp_nla)
+{
+	struct nlattr **tb;
+	unsigned int mode = XDP_ATTACHED_NONE;
+	int err = 0;
+
+	if (!xdp_nla)
+		/* XDP not supported */
+		return 0;
+	tb = nla_nested_attrs(xdp_nla, IFLA_XDP_MAX);
+	if (!tb)
+		return ENOMEM;
+	if (tb[IFLA_XDP_ATTACHED])
+		mode = nla_read_u8(tb[IFLA_XDP_ATTACHED]);
+	if (mode == XDP_ATTACHED_NONE)
+		goto out;
+	if (mode == XDP_ATTACHED_MULTI) {
+		if ((err = fill_if_xdp_prog(xdp_list, XDP_ATTACHED_DRV, tb[IFLA_XDP_DRV_PROG_ID])) ||
+		    (err = fill_if_xdp_prog(xdp_list, XDP_ATTACHED_SKB, tb[IFLA_XDP_SKB_PROG_ID])) ||
+		    (err = fill_if_xdp_prog(xdp_list, XDP_ATTACHED_HW, tb[IFLA_XDP_HW_PROG_ID])))
+			goto out;
+	} else {
+		if ((err = fill_if_xdp_prog(xdp_list, mode, tb[IFLA_XDP_PROG_ID])))
+			goto out;
+	}
+out:
+	free(tb);
+	return err;
+}
+
 static int fill_if_link(struct if_entry *dest, struct nlmsg *msg)
 {
 	struct ifinfomsg *ifi;
@@ -101,6 +161,9 @@ static int fill_if_link(struct if_entry *dest, struct nlmsg *msg)
 		 * the mechanisms for driver detection that we use */
 		dest->driver = strdup("unknown driver, please report a bug");
 	}
+
+	if ((err = fill_if_xdp(&dest->xdp, tb[IFLA_XDP])))
+		goto err_driver;
 
 	if ((err = if_handler_init(dest)))
 		goto err_driver;
@@ -193,6 +256,7 @@ struct if_entry *if_create(void)
 		return NULL;
 
 	list_init(&entry->addr);
+	list_init(&entry->xdp);
 	list_init(&entry->rev_master);
 	list_init(&entry->rev_link);
 	list_init(&entry->properties);
@@ -262,6 +326,7 @@ static void if_list_destruct(struct if_entry *entry)
 	free(entry->sub_driver);
 	mac_addr_destruct(&entry->mac_addr);
 	label_free_property(&entry->properties);
+	list_free(&entry->xdp, NULL);
 	list_free(&entry->addr, (destruct_f) if_addr_destruct);
 }
 

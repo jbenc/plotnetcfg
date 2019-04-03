@@ -142,6 +142,12 @@ them will not be considered a format change.
 .RE
 
 .TP
+xdp
+.I (array)
+Array of XDP programs, as xdp objects. Not present if there are no XDP
+programs loaded.
+
+.TP
 warning
 .I (bool)
 There was a problem gathering data about this interface. Details are in the
@@ -284,6 +290,18 @@ type
 Route type, one of the following: unspec, unicast, local, broadcast, anycast,
 multicast, blackhole, unreachable, prohibit, throw, nat. Others may be added in
 the future, without breaking the format.
+
+.SS Xdp object fields
+
+.TP
+mode
+.I (string)
+XDP mode. Currently one of the following: driver, generic, offloaded.
+
+.TP
+prog_id
+.I (integer)
+XDP program id.
 
 .SH SEE ALSO
 .BR plotnetcfg (8)

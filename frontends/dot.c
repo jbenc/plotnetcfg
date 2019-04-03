@@ -59,6 +59,14 @@ static void output_mtu(FILE *f, struct if_entry *ptr)
 		fprintf(f, "\\nMTU %d", ptr->mtu);
 }
 
+static void output_xdp(FILE *f, struct list *xdp_list)
+{
+	struct if_xdp *xdp;
+
+	list_for_each(xdp, *xdp_list)
+		fprintf(f, "\\nxdp-%s (id %u)", xdp->mode, xdp->prog_id);
+}
+
 static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_mask)
 {
 	struct if_entry *ptr;
@@ -69,6 +77,7 @@ static void output_ifaces_pass1(FILE *f, struct list *list, unsigned int prop_ma
 			fprintf(f, " (%s)", ifdrv(ptr));
 		output_label_properties(f, &ptr->properties, prop_mask);
 		output_mtu(f, ptr);
+		output_xdp(f, &ptr->xdp);
 		if (label_prop_match_mask(IF_PROP_CONFIG, prop_mask)) {
 			output_addresses(f, &ptr->addr);
 			if ((ptr->flags & IF_LOOPBACK) == 0 && ptr->mac_addr.formatted)

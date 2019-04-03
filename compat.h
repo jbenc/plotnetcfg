@@ -21,10 +21,11 @@
 #endif
 
 #define IFLA_LINK_NETNSID	37
+#define IFLA_XDP		43
 
-#if IFLA_MAX < IFLA_LINK_NETNSID
+#if IFLA_MAX < IFLA_XDP
 #undef IFLA_MAX
-#define IFLA_MAX IFLA_LINK_NETNSID
+#define IFLA_MAX IFLA_XDP
 #endif
 
 #define NETNSA_NSID		1
@@ -92,6 +93,29 @@ enum {
 #define IFLA_BOND_MAX	(__IFLA_BOND_MAX - 1)
 #endif
 
+#ifndef IFLA_XDP_MAX
+enum {
+	IFLA_XDP_UNSPEC,
+	IFLA_XDP_FD,
+	IFLA_XDP_ATTACHED,
+	IFLA_XDP_FLAGS,
+	IFLA_XDP_PROG_ID,
+	IFLA_XDP_DRV_PROG_ID,
+	IFLA_XDP_SKB_PROG_ID,
+	IFLA_XDP_HW_PROG_ID,
+	__IFLA_XDP_MAX,
+};
+#define IFLA_XDP_MAX (__IFLA_XDP_MAX - 1)
+
+enum {
+	XDP_ATTACHED_NONE = 0,
+	XDP_ATTACHED_DRV,
+	XDP_ATTACHED_SKB,
+	XDP_ATTACHED_HW,
+	XDP_ATTACHED_MULTI,
+};
+#endif
+
 #ifndef RTAX_QUICKACK
 #define RTAX_QUICKACK	15
 #endif
@@ -112,6 +136,5 @@ enum {
 #ifndef RTPROT_BABEL
 #define RTPROT_BABEL	42
 #endif
-
 
 #endif
