@@ -1,3 +1,8 @@
 .git
 Makefile.docker
 Dockerfile
+*.o                                                                                                                                            
+plotnetcfg                                                                                                                                     
+version.h                                                                                                                                      
+tags                                                                                                                                           
+Makefile.dep 

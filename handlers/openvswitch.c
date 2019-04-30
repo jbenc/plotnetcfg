@@ -16,7 +16,6 @@
 
 #include "openvswitch.h"
 #include <errno.h>
-#include <error.h>
 #include <jansson.h>
 #include <net/if.h>
 #include <stdarg.h>
