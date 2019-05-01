@@ -1,0 +1,24 @@
+.phony: push build tag_extra
+
+ifndef DOCKERHUB_PUSH_ACCOUNT
+  $(error DOCKERHUB_PUSH_ACCOUNT is not set - this is the account images will be pushed to)
+endif
+
+PROJECT := $(shell pwd | awk 'BEGIN{FS="/"}{print $$NF}' )
+GIT_TAG := $(shell git describe --always)
+DOCKER_BRANCH := $(shell git describe --always --all | sed 's_^heads/__;s/\//-/g' )
+DOCKER_TAG_AND_HASH := $(shell git describe --always)
+
+build:
+	docker build -f Dockerfile --build-arg=code_version="$(GIT_TAG)" -t "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" -t "$(PROJECT):latest" .
+
+tag_extra: build
+	docker tag "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)"
+	docker tag "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):latest"
+
+push: tag_extra
+	docker push "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)"
+	docker push "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):latest"
+
+run: 
+	docker run --rm -it --pid=host --privileged -v /dev:/dev "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):latest" plotnetcfg
