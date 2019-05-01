@@ -10,7 +10,7 @@ DOCKER_BRANCH := $(shell git describe --always --all | sed 's_^heads/__;s/\//-/g
 DOCKER_TAG_AND_HASH := $(shell git describe --always)
 
 build:
-	docker build --build-arg=code_version="$(GIT_TAG)" -t "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" -t "$(PROJECT):latest" .
+	docker build -f Dockerfile --build-arg=code_version="$(GIT_TAG)" -t "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" -t "$(PROJECT):latest" .
 
 tag_extra: build
 	docker tag "$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)" "$(DOCKERHUB_PUSH_ACCOUNT)/$(PROJECT):$(DOCKER_BRANCH)-$(DOCKER_TAG_AND_HASH)"

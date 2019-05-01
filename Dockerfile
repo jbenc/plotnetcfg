@@ -1,17 +1,17 @@
-FROM alpine:latest as base
+FROM centos:7 
 
 COPY . /plotnetcfg
 
 WORKDIR /plotnetcfg
 
-RUN apk add --update make jansson-dev gcc linux-headers libc-dev 
+RUN yum install -y make jansson-devel gcc 
 
 RUN make 
 
-FROM alpine:latest
+FROM centos:7
 
-RUN apk add --update jansson
+RUN yum -y install jansson
 
-COPY --from=base /plotnetcfg/plotnetcfg /bin/
- 
+COPY --from=0 /plotnetcfg/plotnetcfg /bin/
+
 CMD ["/bin/plotnetcfg"]

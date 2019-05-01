@@ -1,8 +1,8 @@
-.git
-Makefile.docker
-Dockerfile
 *.o                                                                                                                                            
-plotnetcfg                                                                                                                                     
-version.h                                                                                                                                      
-tags                                                                                                                                           
+.git
+Dockerfile.*
 Makefile.dep 
+Makefile.docker
+plotnetcfg                                                                                                                                     
+tags                                                                                                                                           
+version.h                                                                                                                                      
