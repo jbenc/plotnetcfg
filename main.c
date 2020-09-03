@@ -41,6 +41,7 @@
 #include "handlers/vlan.h"
 #include "handlers/vti.h"
 #include "handlers/vxlan.h"
+#include "handlers/xfrm.h"
 #include "handlers/route.h"
 
 static void register_frontends(void)
@@ -63,6 +64,7 @@ static void register_handlers(void)
 	handler_vlan_register();
 	handler_vti_register();
 	handler_vxlan_register();
+	handler_xfrm_register();
 	handler_route_register();
 }
 

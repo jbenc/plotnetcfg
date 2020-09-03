@@ -116,6 +116,16 @@ enum {
 };
 #endif
 
+#ifndef IFLA_XFRM_MAX
+enum {
+	IFLA_XFRM_UNSPEC,
+	IFLA_XFRM_LINK,
+	IFLA_XFRM_IF_ID,
+	__IFLA_XFRM_MAX
+};
+#define IFLA_XFRM_MAX (__IFLA_XFRM_MAX - 1)
+#endif
+
 #ifndef RTAX_QUICKACK
 #define RTAX_QUICKACK	15
 #endif
