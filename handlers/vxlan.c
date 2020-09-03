@@ -28,7 +28,7 @@
 
 #include "../compat.h"
 
-#define VXLAN_DEFAULT_PORT 46354
+#define VXLAN_DEFAULT_PORT 4789
 
 struct vxlan_priv {
 	struct addr *local;
@@ -101,7 +101,7 @@ static int vxlan_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		if_add_config(entry, "VNI", "%u", nla_read_u32(vxlaninfo[IFLA_VXLAN_ID]));
 
 	if (vxlaninfo[IFLA_VXLAN_PORT]) {
-		port = nla_read_u16(vxlaninfo[IFLA_VXLAN_PORT]);
+		port = nla_read_be16(vxlaninfo[IFLA_VXLAN_PORT]);
 		if (port != VXLAN_DEFAULT_PORT)
 			if_add_config(entry, "port", "%u", port);
 	}
