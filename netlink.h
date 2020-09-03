@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -105,6 +106,22 @@ static inline uint16_t nla_read_u16(const struct nlattr *nla)
 static inline uint32_t nla_read_u32(const struct nlattr *nla)
 {
 	return *(uint32_t *)(nla + 1);
+}
+
+static inline uint16_t nla_read_be16(const struct nlattr *nla)
+{
+	return ntohs(*(uint16_t *)(nla + 1));
+}
+
+static inline uint32_t nla_read_be32(const struct nlattr *nla)
+{
+	return ntohl(*(uint32_t *)(nla + 1));
+}
+
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+static inline uint64_t nla_read_be64(const struct nlattr *nla)
+{
+	return ntohll(*(uint64_t *)(nla + 1));
 }
 
 static inline int32_t nla_read_s32(const struct nlattr *nla)
