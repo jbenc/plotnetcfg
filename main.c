@@ -39,6 +39,7 @@
 #include "handlers/team.h"
 #include "handlers/veth.h"
 #include "handlers/vlan.h"
+#include "handlers/vti.h"
 #include "handlers/vxlan.h"
 #include "handlers/route.h"
 
@@ -60,6 +61,7 @@ static void register_handlers(void)
 	handler_team_register();
 	handler_veth_register();
 	handler_vlan_register();
+	handler_vti_register();
 	handler_vxlan_register();
 	handler_route_register();
 }
