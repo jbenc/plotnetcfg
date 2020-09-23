@@ -90,7 +90,8 @@ static struct netns_entry *netns_create()
 
 static int netns_get_var_entry(struct netns_entry **result,
 			       struct list *netns_list,
-			       const char *name)
+			       const char *name,
+			       struct list *warnings)
 {
 	struct netns_entry *entry;
 	char path[PATH_MAX];
@@ -103,13 +104,17 @@ static int netns_get_var_entry(struct netns_entry **result,
 
 	snprintf(path, sizeof(path), "%s/%s", NETNS_RUN_DIR, name);
 	entry->fd = open(path, O_RDONLY);
-	if (entry->fd < 0)
-		return errno;
+	if (entry->fd < 0) {
+		label_add(warnings, "Wrong %s: %s", path, strerror(errno));
+		return -1;
+	}
 	/* to get the kernel_id, we need to switch to that ns and examine
 	 * /proc/self */
 	err = netns_switch(entry);
-	if (err)
-		return err;
+	if (err) {
+		label_add(warnings, "Wrong %s: %s", path, strerror(err));
+		return -1;
+	}
 	kernel_id = netns_get_kernel_id("/proc/self/ns/net");
 	if (kernel_id < 0)
 		return -kernel_id;
@@ -215,7 +220,7 @@ static int netns_new_list(struct list *result, int supported)
 	return 0;
 }
 
-static int netns_add_var_list(struct list *netns_list)
+static int netns_add_var_list(struct list *netns_list, struct list *warnings)
 {
 	struct netns_entry *entry;
 	struct dirent *de;
@@ -230,7 +235,7 @@ static int netns_add_var_list(struct list *netns_list)
 		if (!strcmp(de->d_name, ".") ||
 		    !strcmp(de->d_name, ".."))
 			continue;
-		err = netns_get_var_entry(&entry, netns_list, de->d_name);
+		err = netns_get_var_entry(&entry, netns_list, de->d_name, warnings);
 		if (err < 0) {
 			/* duplicate entry */
 			continue;
@@ -341,7 +346,9 @@ int netns_fill_list(struct list *result, int supported)
 	if (err)
 		return err;
 	if (supported) {
-		err = netns_add_var_list(result);
+		struct netns_entry *root = list_head(*result);
+
+		err = netns_add_var_list(result, &root->warnings);
 		if (err)
 			return err;
 		err = netns_add_proc_list(result);
