@@ -142,8 +142,10 @@ static int vxlan_post(struct if_entry *entry, _unused struct list *netns_list)
 
 	priv = (struct vxlan_priv *) entry->handler_private;
 	if (priv->local) {
+		struct netns_entry *ns = entry->link_net ? : entry->ns;
+
 		if_add_config(entry, "from", "%s", priv->local->formatted);
-		if ((ife = tunnel_find_addr(entry->ns, priv->local))) {
+		if ((ife = tunnel_find_addr(ns, priv->local))) {
 			link_set(ife, entry);
 			entry->flags |= IF_LINK_WEAK;
 		}
