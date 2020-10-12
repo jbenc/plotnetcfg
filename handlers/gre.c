@@ -49,6 +49,13 @@ static struct if_handler h_gretap = {
 	.post = gre_post,
 };
 
+static struct if_handler h_erspan = {
+	.driver = "erspan",
+	.private_size = sizeof(struct gre_priv),
+	.netlink = gre_netlink,
+	.post = gre_post,
+};
+
 static struct if_handler h_ip6gre = {
 	.driver = "ip6gre",
 	.private_size = sizeof(struct gre_priv),
@@ -63,12 +70,21 @@ static struct if_handler h_ip6gretap = {
 	.post = gre_post,
 };
 
+static struct if_handler h_ip6erspan = {
+	.driver = "ip6erspan",
+	.private_size = sizeof(struct gre_priv),
+	.netlink = gre6_netlink,
+	.post = gre_post,
+};
+
 void handler_gre_register(void)
 {
 	if_handler_register(&h_gre);
 	if_handler_register(&h_gretap);
+	if_handler_register(&h_erspan);
 	if_handler_register(&h_ip6gre);
 	if_handler_register(&h_ip6gretap);
+	if_handler_register(&h_ip6erspan);
 }
 
 static int gre_common_netlink(int family, struct if_entry *entry, struct nlattr **linkinfo)
