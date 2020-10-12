@@ -28,6 +28,7 @@
 #include "../netns.h"
 
 static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo);
+static int gre6_netlink(struct if_entry *entry, struct nlattr **linkinfo);
 static int gre_post(struct if_entry *entry, struct list *netns_list);
 
 struct gre_priv {
@@ -48,13 +49,29 @@ static struct if_handler h_gretap = {
 	.post = gre_post,
 };
 
+static struct if_handler h_ip6gre = {
+	.driver = "ip6gre",
+	.private_size = sizeof(struct gre_priv),
+	.netlink = gre6_netlink,
+	.post = gre_post,
+};
+
+static struct if_handler h_ip6gretap = {
+	.driver = "ip6gretap",
+	.private_size = sizeof(struct gre_priv),
+	.netlink = gre6_netlink,
+	.post = gre_post,
+};
+
 void handler_gre_register(void)
 {
 	if_handler_register(&h_gre);
 	if_handler_register(&h_gretap);
+	if_handler_register(&h_ip6gre);
+	if_handler_register(&h_ip6gretap);
 }
 
-static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
+static int gre_common_netlink(int family, struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct nlattr **greinfo;
 	struct gre_priv *priv;
@@ -76,7 +93,7 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 
 	priv->local.family = -1;
 	if (greinfo[IFLA_GRE_LOCAL]) {
-		if ((err = addr_init(&priv->local, AF_INET, -1, nla_read(greinfo[IFLA_GRE_LOCAL]))))
+		if ((err = addr_init(&priv->local, family, -1, nla_read(greinfo[IFLA_GRE_LOCAL]))))
 			goto err_attrs;
 		if (!addr_is_zero(&priv->local))
 			if_add_config(entry, "local", "%s", priv->local.formatted);
@@ -84,7 +101,7 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 
 	if (greinfo[IFLA_GRE_REMOTE]) {
 		struct addr addr;
-		if ((err = addr_init(&addr, AF_INET, -1, nla_read(greinfo[IFLA_GRE_REMOTE]))))
+		if ((err = addr_init(&addr, family, -1, nla_read(greinfo[IFLA_GRE_REMOTE]))))
 			goto err_attrs;
 		if (!addr_is_zero(&addr))
 			if_add_config(entry, "remote", "%s", addr.formatted);
@@ -111,6 +128,16 @@ err_attrs:
 err_priv:
 	free(priv);
 	return err;
+}
+
+static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
+{
+	return gre_common_netlink(AF_INET, entry, linkinfo);
+}
+
+static int gre6_netlink(struct if_entry *entry, struct nlattr **linkinfo)
+{
+	return gre_common_netlink(AF_INET6, entry, linkinfo);
 }
 
 static int gre_post(struct if_entry *entry, _unused struct list *netns_list)
