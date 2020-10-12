@@ -113,6 +113,18 @@ static json_t *connection(struct if_entry *target, char *edge_label)
 	return obj;
 }
 
+static json_t *link_netns(struct netns_entry *target)
+{
+	json_t *obj, *arr;
+
+	obj = json_object();
+	json_object_set_new(obj, "target", json_string(nsid(target)));
+
+	arr = json_array();
+	json_object_set_new(obj, "info", arr);
+	return obj;
+}
+
 static json_t *interfaces_to_array(struct list *list, struct output_entry *output_entry)
 {
 	struct if_entry *entry, *link, *slave;
@@ -133,6 +145,8 @@ static json_t *interfaces_to_array(struct list *list, struct output_entry *outpu
 			if ((entry->flags & IF_LOOPBACK) == 0 && entry->mac_addr.formatted)
 				json_object_set_new(ifobj, "mac", json_string(entry->mac_addr.formatted));
 		}
+		if (!entry->link_index && entry->link_net)
+			json_object_set_new(ifobj, "link-netns", link_netns(entry->link_net));
 		json_object_set_new(ifobj, "type", json_string(entry->flags & IF_INTERNAL ?
 							       "internal" :
 							       "device"));

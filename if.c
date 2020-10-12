@@ -124,11 +124,10 @@ static int fill_if_link(struct if_entry *dest, struct nlmsg *msg)
 	}
 	if (tb[IFLA_MASTER])
 		dest->master_index = nla_read_u32(tb[IFLA_MASTER]);
-	if (tb[IFLA_LINK]) {
+	if (tb[IFLA_LINK])
 		dest->link_index = nla_read_u32(tb[IFLA_LINK]);
-		if (tb[IFLA_LINK_NETNSID])
-			dest->link_netnsid = nla_read_s32(tb[IFLA_LINK_NETNSID]);
-	}
+	if (tb[IFLA_LINK_NETNSID])
+		dest->link_netnsid = nla_read_s32(tb[IFLA_LINK_NETNSID]);
 	if (tb[IFLA_MTU])
 		dest->mtu = nla_read_u32(tb[IFLA_MTU]);
 	if (tb[IFLA_LINKINFO]) {

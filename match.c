@@ -62,21 +62,31 @@ int match_if(struct match_desc *desc, match_callback_f callback, void *arg)
 	return match_if_ns(desc, callback, arg);
 }
 
+struct netns_entry *match_netnsid(int netnsid, struct netns_entry *current)
+{
+	struct netns_id *ptr;
+
+	list_for_each(ptr, current->ids) {
+		if (ptr->id == netnsid)
+			return ptr->ns;
+	}
+	return NULL;
+}
+
 struct if_entry *match_if_netnsid(unsigned int ifindex, int netnsid,
 				  struct netns_entry *current)
 {
-	struct netns_id *ptr;
+	struct netns_entry *ptr = match_netnsid(netnsid, current);
 	struct if_entry *entry;
 
-	list_for_each(ptr, current->ids) {
-		if (ptr->id == netnsid) {
-			list_for_each(entry, ptr->ns->ifaces) {
-				if (entry->if_index == ifindex)
-					return entry;
-			}
-			break;
-		}
+	if (!ptr)
+		return NULL;
+
+	list_for_each(entry, ptr->ifaces) {
+		if (entry->if_index == ifindex)
+			return entry;
 	}
+
 	return NULL;
 }
 
@@ -87,10 +97,14 @@ void match_all_netnsid(struct list *netns_list)
 
 	list_for_each(ns, *netns_list) {
 		list_for_each(entry, ns->ifaces) {
-			if (entry->link_netnsid >= 0)
-				link_set(match_if_netnsid(entry->link_index,
-							  entry->link_netnsid,
-							  ns), entry);
+			if (entry->link_netnsid >= 0) {
+				if (entry->link_index)
+					link_set(match_if_netnsid(entry->link_index,
+								  entry->link_netnsid,
+								  ns), entry);
+				else
+					entry->link_net = match_netnsid(entry->link_netnsid, ns);
+			}
 			if (entry->peer_netnsid >= 0)
 				peer_set(entry, match_if_netnsid(entry->peer_index,
 								 entry->peer_netnsid,

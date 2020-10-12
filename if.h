@@ -66,6 +66,9 @@ struct if_entry {
 	int peer_netnsid;
 	struct if_entry *peer;
 
+	/* netns relation without peer/child */
+	struct netns_entry *link_net;
+
 	/* IOV fields */
 	char *pci_path;
 	char *pci_physfn_path;

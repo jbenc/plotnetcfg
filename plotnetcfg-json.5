@@ -112,6 +112,15 @@ mtu
 Interface MTU.
 
 .TP
+link-netns
+.I (object)
+.BR id
+The namespace of the link for the interface. Only present for
+cross-net interfaces that don't have a peer or parent/child
+relationship.
+
+
+.TP
 type
 .I (string)
 .RS
@@ -184,6 +193,20 @@ between the two interfaces, formatted. May be an empty array.
 target
 .I (string)
 Id of the interface that is being linked to.
+
+.SS Link namespace object fields
+
+.TP
+info
+.I (array)
+Array of strings. Contains additional information about the connection
+between the interface and network namespace, formatted. May be an
+empty array.
+
+.TP
+target
+.I (string)
+Id of the network namespace that is being linked to.
 
 .SS Address object fields
 
