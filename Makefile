@@ -9,7 +9,7 @@ CFLAGS=-std=c99 -D_GNU_SOURCE -W -Wall $(INCLUDE) $(EXTRA_CFLAGS)
 
 OBJECTS=addr args ethtool frontend handler if label main master \
         match netlink netns route sysfs tunnel utils
-HANDLERS=bond bridge geneve gre iov macsec openvswitch team veth vlan vti vxlan xfrm route
+HANDLERS=bond bridge geneve gre iov ipxipy macsec openvswitch team veth vlan vti vxlan xfrm route
 FRONTENDS=dot json
 
 OBJ=$(OBJECTS:%=%.o) $(HANDLERS:%=handlers/%.o) $(FRONTENDS:%=frontends/%.o)

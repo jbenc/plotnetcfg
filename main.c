@@ -35,6 +35,7 @@
 #include "handlers/geneve.h"
 #include "handlers/gre.h"
 #include "handlers/iov.h"
+#include "handlers/ipxipy.h"
 #include "handlers/macsec.h"
 #include "handlers/openvswitch.h"
 #include "handlers/team.h"
@@ -59,6 +60,7 @@ static void register_handlers(void)
 	handler_geneve_register();
 	handler_gre_register();
 	handler_iov_register();
+	handler_ipxipy_register();
 	handler_macsec_register();
 	handler_openvswitch_register();
 	handler_team_register();
