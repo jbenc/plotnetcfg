@@ -34,15 +34,22 @@
 
 static int vti4_netlink(struct if_entry *entry, struct nlattr **linkinfo);
 static int vti6_netlink(struct if_entry *entry, struct nlattr **linkinfo);
+static int vti_post(struct if_entry *entry, struct list *netns_list);
+
+struct vti_priv {
+	struct addr local;
+};
 
 static struct if_handler h_vti4 = {
 	.driver = "vti",
 	.netlink = vti4_netlink,
+	.post = vti_post,
 };
 
 static struct if_handler h_vti6 = {
 	.driver = "vti6",
 	.netlink = vti6_netlink,
+	.post = vti_post,
 };
 
 void handler_vti_register(void)
@@ -54,14 +61,22 @@ void handler_vti_register(void)
 static int vti_netlink(int family, struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct nlattr **vtiinfo;
+	struct vti_priv *priv;
 	int err, key;
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
 
-	vtiinfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_VTI_MAX);
-	if (!vtiinfo)
+	priv = calloc(1, sizeof(struct vti_priv));
+	if (!priv)
 		return ENOMEM;
+	entry->handler_private = priv;
+
+	vtiinfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_VTI_MAX);
+	if (!vtiinfo) {
+		err = ENOMEM;
+		goto err_priv;
+	}
 
 	if (vtiinfo[IFLA_VTI_REMOTE]) {
 		struct addr addr;
@@ -72,13 +87,12 @@ static int vti_netlink(int family, struct if_entry *entry, struct nlattr **linki
 		addr_destruct(&addr);
 	}
 
+	priv->local.family = -1;
 	if (vtiinfo[IFLA_VTI_LOCAL]) {
-		struct addr addr;
-		if ((err = addr_init(&addr, family, -1, nla_read(vtiinfo[IFLA_VTI_LOCAL]))))
+		if ((err = addr_init(&priv->local, family, -1, nla_read(vtiinfo[IFLA_VTI_LOCAL]))))
 			goto err_attrs;
-		if (!addr_is_zero(&addr))
-			if_add_config(entry, "local", "%s", addr.formatted);
-		addr_destruct(&addr);
+		if (!addr_is_zero(&priv->local))
+			if_add_config(entry, "local", "%s", priv->local.formatted);
 	}
 
 	if (vtiinfo[IFLA_VTI_IKEY]) {
@@ -91,8 +105,13 @@ static int vti_netlink(int family, struct if_entry *entry, struct nlattr **linki
 			if_add_config(entry, "okey", "%u", key);
 	}
 
+	free(vtiinfo);
+	return 0;
+
 err_attrs:
 	free(vtiinfo);
+err_priv:
+	free(priv);
 	return err;
 }
 
@@ -104,4 +123,22 @@ static int vti4_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 static int vti6_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	return vti_netlink(AF_INET6, entry, linkinfo);
+}
+
+static int vti_post(struct if_entry *entry, _unused struct list *netns_list)
+{
+	struct vti_priv *priv;
+	struct if_entry *ife;
+
+	priv = (struct vti_priv *) entry->handler_private;
+	if (priv->local.family >= 0) {
+		struct netns_entry *ns = entry->link_net ? : entry->ns;
+
+		if ((ife = tunnel_find_addr(ns, &priv->local))) {
+			link_set(ife, entry);
+			entry->flags |= IF_LINK_WEAK;
+		}
+	}
+
+	return 0;
 }
