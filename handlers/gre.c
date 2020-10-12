@@ -22,18 +22,30 @@
 #include "../addr.h"
 #include "../handler.h"
 #include "../if.h"
+#include "../master.h"
 #include "../netlink.h"
+#include "../tunnel.h"
+#include "../netns.h"
 
 static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo);
+static int gre_post(struct if_entry *entry, struct list *netns_list);
+
+struct gre_priv {
+	struct addr local;
+};
 
 static struct if_handler h_gre = {
 	.driver = "gre",
+	.private_size = sizeof(struct gre_priv),
 	.netlink = gre_netlink,
+	.post = gre_post,
 };
 
 static struct if_handler h_gretap = {
 	.driver = "gretap",
+	.private_size = sizeof(struct gre_priv),
 	.netlink = gre_netlink,
+	.post = gre_post,
 };
 
 void handler_gre_register(void)
@@ -45,22 +57,29 @@ void handler_gre_register(void)
 static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 {
 	struct nlattr **greinfo;
+	struct gre_priv *priv;
 	int err, key;
 
 	if (!linkinfo || !linkinfo[IFLA_INFO_DATA])
 		return ENOENT;
 
-	greinfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_GRE_MAX);
-	if (!greinfo)
+	priv = calloc(1, sizeof(struct gre_priv));
+	if (!priv)
 		return ENOMEM;
+	entry->handler_private = priv;
 
+	greinfo = nla_nested_attrs(linkinfo[IFLA_INFO_DATA], IFLA_GRE_MAX);
+	if (!greinfo) {
+		err = ENOMEM;
+		goto err_priv;
+	}
+
+	priv->local.family = -1;
 	if (greinfo[IFLA_GRE_LOCAL]) {
-		struct addr addr;
-		if ((err = addr_init(&addr, AF_INET, -1, nla_read(greinfo[IFLA_GRE_LOCAL]))))
+		if ((err = addr_init(&priv->local, AF_INET, -1, nla_read(greinfo[IFLA_GRE_LOCAL]))))
 			goto err_attrs;
-		if (!addr_is_zero(&addr))
-			if_add_config(entry, "local", "%s", addr.formatted);
-		addr_destruct(&addr);
+		if (!addr_is_zero(&priv->local))
+			if_add_config(entry, "local", "%s", priv->local.formatted);
 	}
 
 	if (greinfo[IFLA_GRE_REMOTE]) {
@@ -84,9 +103,30 @@ static int gre_netlink(struct if_entry *entry, struct nlattr **linkinfo)
 		if ((key = nla_read_u32(greinfo[IFLA_GRE_OKEY])))
 			if_add_config(entry, "okey", "%u", ntohl(key));
 
-	err = 0;
+	free(greinfo);
+	return 0;
 
 err_attrs:
 	free(greinfo);
+err_priv:
+	free(priv);
 	return err;
+}
+
+static int gre_post(struct if_entry *entry, _unused struct list *netns_list)
+{
+	struct gre_priv *priv;
+	struct if_entry *ife;
+
+	priv = (struct gre_priv *) entry->handler_private;
+	if (priv->local.family >= 0) {
+		struct netns_entry *ns = entry->link_net ? : entry->ns;
+
+		if ((ife = tunnel_find_addr(ns, &priv->local))) {
+			link_set(ife, entry);
+			entry->flags |= IF_LINK_WEAK;
+		}
+	}
+
+	return 0;
 }
