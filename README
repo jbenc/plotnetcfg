@@ -33,7 +33,7 @@ make
 The following flags can be overridden during the build:
 - CC
   Choose a different compiler (such as clang or an arm cross compiler)
-- EXTRA_CFLAGS
+- CFLAGS
   Additional compilation flags to pass to the compiler
 
 Bugs:
